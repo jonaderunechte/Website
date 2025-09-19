@@ -63,13 +63,9 @@
     <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <!-- Artikel werden hier dynamisch eingefügt -->
     </div>
-
-    <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Meine Käufe & Verkäufe</h2>
-    <div id="transactionsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-      <!-- Käufe & Verkäufe werden hier angezeigt -->
-    </div>
   </div>
 
+  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -92,7 +88,6 @@
 
     const addItemForm = document.getElementById("addItemForm");
     const itemsContainer = document.getElementById("itemsContainer");
-    const transactionsContainer = document.getElementById("transactionsContainer");
     const currentUserIdSpan = document.getElementById("currentUserId");
     const currentBalanceSpan = document.getElementById("currentBalance");
     const messageBar = document.getElementById("messageBar");
@@ -115,7 +110,6 @@
         currentUserIdSpan.textContent = userId;
         listenForUserBalance();
         listenForItems();
-        listenForTransactions();
       } catch (error) {
         showMessage("Fehler bei der Anmeldung: " + error.message, 'error');
       }
@@ -165,7 +159,7 @@
         </svg>`;
         deleteButton.title = "Anzeige löschen";
         deleteButton.addEventListener("click", (e) => {
-          e.stopPropagation();
+          e.stopPropagation(); // Verhindert, dass die Detailansicht geöffnet wird
           if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
             deleteItem(item.id);
           }
@@ -252,19 +246,6 @@
           await setDoc(sellerBalanceRef, { balance: item.price });
         }
 
-        // Transaktion speichern
-        const transaction = {
-          itemId: item.id,
-          itemName: item.name,
-          price: item.price,
-          quantity: 1,
-          buyerId: userId,
-          sellerId: item.sellerId,
-          timestamp: Date.now()
-        };
-        const transactionsCollectionRef = collection(db, `artifacts/${appId}/public/data/transactions`);
-        await addDoc(transactionsCollectionRef, transaction);
-
         showMessage("Kauf erfolgreich!", 'success');
       } catch (err) {
         console.error(err);
@@ -300,37 +281,6 @@
         showMessage("Fehler beim Posten des Artikels.", 'error');
       }
     });
-
-    // Transactions Listener
-    const listenForTransactions = () => {
-      const transactionsCollectionRef = collection(db, `artifacts/${appId}/public/data/transactions`);
-      onSnapshot(transactionsCollectionRef, (querySnapshot) => {
-        transactionsContainer.innerHTML = '';
-        querySnapshot.forEach((docSnap) => {
-          const t = { id: docSnap.id, ...docSnap.data() };
-          if (t.buyerId === userId || t.sellerId === userId) {
-            renderTransaction(t);
-          }
-        });
-      });
-    };
-
-    const renderTransaction = (t) => {
-      const card = document.createElement("div");
-      card.className = "bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow relative";
-
-      const type = t.buyerId === userId ? "Gekauft" : "Verkauft";
-      const otherParty = t.buyerId === userId ? t.sellerId : t.buyerId;
-
-      card.innerHTML = `
-        <h3 class="text-xl font-bold text-gray-800">${t.itemName}</h3>
-        <p class="text-green-600 text-lg font-semibold">${t.price.toFixed(2)} €</p>
-        <p class="text-sm text-gray-500 mb-2">${type} von ${otherParty}</p>
-        <p class="text-xs text-gray-400">Menge: ${t.quantity}</p>
-        <p class="text-xs text-gray-400">${new Date(t.timestamp).toLocaleString()}</p>
-      `;
-      transactionsContainer.appendChild(card);
-    };
 
     authenticate();
   </script>
