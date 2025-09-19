@@ -94,7 +94,6 @@
 
     let userId;
     let userBalance = 0;
-    let isAdmin = false; // Admin-Flag
 
     function showMessage(msg, type = 'success') {
       messageBar.textContent = msg;
@@ -152,8 +151,7 @@
         <p class="text-xs text-gray-500">Menge: ${item.quantity}</p>
       `;
 
-      // Lösch-Button auch für Admins
-      if (item.sellerId === userId || isAdmin) {
+      if (item.sellerId === userId) {
         const deleteButton = document.createElement("button");
         deleteButton.className = "absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors";
         deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -161,7 +159,7 @@
         </svg>`;
         deleteButton.title = "Anzeige löschen";
         deleteButton.addEventListener("click", (e) => {
-          e.stopPropagation();
+          e.stopPropagation(); // Verhindert, dass die Detailansicht geöffnet wird
           if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
             deleteItem(item.id);
           }
@@ -189,7 +187,7 @@
           <p class="text-sm text-gray-500 mb-4">Verkäufer: ${item.sellerId}</p>
           <p class="text-sm text-gray-500 mb-6">Verfügbar: ${item.quantity} Stück</p>
           <button id="buyItemBtn" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Kaufen</button>
-          ${(item.sellerId === userId || isAdmin) ? `<button id="deleteItemBtn" class="w-full mt-2 px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">Löschen</button>` : ''}
+          ${item.sellerId === userId ? `<button id="deleteItemBtn" class="w-full mt-2 px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">Löschen</button>` : ''}
         </div>
       `;
 
@@ -202,7 +200,7 @@
         modal.remove();
       });
 
-      if (item.sellerId === userId || isAdmin) {
+      if (item.sellerId === userId) {
         modal.querySelector("#deleteItemBtn").addEventListener("click", () => {
           if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
             deleteItem(item.id);
@@ -258,15 +256,6 @@
     addItemForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = document.getElementById("itemName").value;
-
-      // Admin aktivieren
-      if (name === "ADMIN_J123") {
-        isAdmin = true;
-        showMessage("Admin-Modus aktiviert!", 'success');
-        addItemForm.reset();
-        return;
-      }
-
       const price = parseFloat(document.getElementById("itemPrice").value);
       const quantity = parseInt(document.getElementById("itemQuantity").value);
       const imageUrls = document.getElementById("itemImages").value.split(",").map(url => url.trim());
