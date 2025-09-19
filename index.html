@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -294,25 +292,33 @@
         return;
       }
 
+      const quantityToBuy = 1;
+
       try {
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
-        await updateDoc(itemRef, { 
-          quantity: item.quantity - 1,
-          soldTo: userId,
-          buyerId: userId,
-          soldAt: Date.now()
-        });
+        await updateDoc(itemRef, { quantity: item.quantity - quantityToBuy });
 
         const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-        await updateDoc(buyerDocRef, { balance: userBalance - item.price });
+        await updateDoc(buyerDocRef, { balance: userBalance - item.price * quantityToBuy });
 
         const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
         const sellerSnap = await getDoc(sellerBalanceRef);
         if (sellerSnap.exists()) {
-          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
+          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price * quantityToBuy });
         } else {
-          await setDoc(sellerBalanceRef, { balance: item.price });
+          await setDoc(sellerBalanceRef, { balance: item.price * quantityToBuy });
         }
+
+        // Neue Transaktion speichern
+        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transactions`), {
+          itemId: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: quantityToBuy,
+          sellerId: item.sellerId,
+          timestamp: Date.now(),
+          imageUrl: item.imageUrls[0]
+        });
 
         showMessage("Kauf erfolgreich!", 'success');
       } catch (err) {
@@ -400,58 +406,36 @@
       `;
 
       document.body.appendChild(modal);
-
       modal.querySelector("#closeTransactionsModal").addEventListener("click", () => modal.remove());
 
       const transactionsContent = modal.querySelector("#transactionsContent");
 
       try {
-        const productsCol = collection(db, `artifacts/${appId}/public/data/products`);
-        const snapshot = await getDocs(productsCol);
+        const transactionsCol = collection(db, `artifacts/${appId}/users/${userId}/transactions`);
+        const snapshot = await getDocs(transactionsCol);
+
+        if (snapshot.empty) {
+          transactionsContent.innerHTML = "<p class='text-gray-500'>Keine Transaktionen gefunden.</p>";
+          return;
+        }
 
         transactionsContent.innerHTML = "";
-
         snapshot.forEach(docSnap => {
-          const item = { id: docSnap.id, ...docSnap.data() };
-
-          // Verkauft
-          if (item.sellerId === userId && item.soldTo) {
-            const soldCard = document.createElement("div");
-            soldCard.className = "p-3 border rounded bg-green-50 flex gap-4";
-            soldCard.innerHTML = `
-              <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
-              <div>
-                <strong>Verkauft:</strong> ${item.name} <br>
-                Preis: ${item.price.toFixed(2)} € <br>
-                An: ${item.soldTo} <br>
-                Menge: ${item.quantity} <br>
-                Datum: ${new Date(item.soldAt).toLocaleString()}
-              </div>
-            `;
-            transactionsContent.appendChild(soldCard);
-          }
-
-          // Gekauft
-          if (item.buyerId === userId) {
-            const boughtCard = document.createElement("div");
-            boughtCard.className = "p-3 border rounded bg-blue-50 flex gap-4";
-            boughtCard.innerHTML = `
-              <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
-              <div>
-                <strong>Gekauft:</strong> ${item.name} <br>
-                Preis: ${item.price.toFixed(2)} € <br>
-                Von: ${item.sellerId} <br>
-                Menge: ${item.quantity} <br>
-                Datum: ${new Date(item.soldAt).toLocaleString()}
-              </div>
-            `;
-            transactionsContent.appendChild(boughtCard);
-          }
+          const tx = docSnap.data();
+          const card = document.createElement("div");
+          card.className = "p-3 border rounded bg-blue-50 flex gap-4";
+          card.innerHTML = `
+            <img src="${tx.imageUrl}" alt="${tx.name}" class="w-20 h-20 object-cover rounded">
+            <div>
+              <strong>Gekauft:</strong> ${tx.name} <br>
+              Preis: ${tx.price.toFixed(2)} € <br>
+              Menge: ${tx.quantity} <br>
+              Von: ${tx.sellerId} <br>
+              Datum: ${new Date(tx.timestamp).toLocaleString()}
+            </div>
+          `;
+          transactionsContent.appendChild(card);
         });
-
-        if (transactionsContent.innerHTML === "") {
-          transactionsContent.innerHTML = "<p class='text-gray-500'>Keine Transaktionen gefunden.</p>";
-        }
 
       } catch (err) {
         console.error(err);
