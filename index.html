@@ -45,7 +45,6 @@
     <div id="userInfo" class="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-600 mb-6 p-2 bg-gray-200 rounded-lg">
       <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
       <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> €</p>
-      <p id="adminStatus" class="text-red-600 font-bold hidden">[ADMIN-MODUS]</p>
     </div>
 
     <form id="addItemForm" class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
@@ -92,11 +91,9 @@
     const currentUserIdSpan = document.getElementById("currentUserId");
     const currentBalanceSpan = document.getElementById("currentBalance");
     const messageBar = document.getElementById("messageBar");
-    const adminStatus = document.getElementById("adminStatus");
 
     let userId;
     let userBalance = 0;
-    let isAdmin = false; // Admin-Flag
 
     function showMessage(msg, type = 'success') {
       messageBar.textContent = msg;
@@ -104,12 +101,6 @@
       setTimeout(() => {
         messageBar.className = `fixed top-0 left-1/2 -translate-x-1/2 z-50 mt-4 p-4 rounded-lg text-white font-bold text-center transition-all duration-300 transform scale-0 opacity-0`;
       }, 3000);
-    }
-
-    function toggleAdminMode(enable) {
-      isAdmin = enable;
-      adminStatus.classList.toggle("hidden", !isAdmin);
-      showMessage(isAdmin ? "Admin-Modus aktiviert!" : "Admin-Modus deaktiviert!", isAdmin ? 'success' : 'error');
     }
 
     async function authenticate() {
@@ -160,30 +151,20 @@
         <p class="text-xs text-gray-500">Menge: ${item.quantity}</p>
       `;
 
-      // Admin darf bearbeiten + löschen
-      if (item.sellerId === userId || isAdmin) {
+      if (item.sellerId === userId) {
         const deleteButton = document.createElement("button");
         deleteButton.className = "absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors";
-        deleteButton.innerHTML = "🗑️";
+        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.728-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 112 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+        </svg>`;
         deleteButton.title = "Anzeige löschen";
         deleteButton.addEventListener("click", (e) => {
-          e.stopPropagation();
+          e.stopPropagation(); // Verhindert, dass die Detailansicht geöffnet wird
           if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
             deleteItem(item.id);
           }
         });
-
-        const editButton = document.createElement("button");
-        editButton.className = "absolute top-2 right-12 p-2 bg-yellow-500 text-white rounded-full shadow-md hover:bg-yellow-600 transition-colors";
-        editButton.innerHTML = "✏️";
-        editButton.title = "Anzeige bearbeiten";
-        editButton.addEventListener("click", (e) => {
-          e.stopPropagation();
-          editItem(item);
-        });
-
         card.appendChild(deleteButton);
-        card.appendChild(editButton);
       }
       
       card.addEventListener("click", () => showItemDetails(item));
@@ -206,9 +187,7 @@
           <p class="text-sm text-gray-500 mb-4">Verkäufer: ${item.sellerId}</p>
           <p class="text-sm text-gray-500 mb-6">Verfügbar: ${item.quantity} Stück</p>
           <button id="buyItemBtn" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Kaufen</button>
-          ${(item.sellerId === userId || isAdmin) ? `
-            <button id="editItemBtn" class="w-full mt-2 px-4 py-3 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition">Bearbeiten</button>
-            <button id="deleteItemBtn" class="w-full mt-2 px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">Löschen</button>` : ''}
+          ${item.sellerId === userId ? `<button id="deleteItemBtn" class="w-full mt-2 px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">Löschen</button>` : ''}
         </div>
       `;
 
@@ -221,42 +200,13 @@
         modal.remove();
       });
 
-      if (item.sellerId === userId || isAdmin) {
+      if (item.sellerId === userId) {
         modal.querySelector("#deleteItemBtn").addEventListener("click", () => {
           if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
             deleteItem(item.id);
             modal.remove();
           }
         });
-        modal.querySelector("#editItemBtn").addEventListener("click", () => {
-          modal.remove();
-          editItem(item);
-        });
-      }
-    }
-
-    async function editItem(item) {
-      const newName = prompt("Neuer Name:", item.name);
-      if (newName === null) return;
-      const newPrice = parseFloat(prompt("Neuer Preis:", item.price));
-      if (isNaN(newPrice)) return;
-      const newQuantity = parseInt(prompt("Neue Menge:", item.quantity));
-      if (isNaN(newQuantity)) return;
-      const newDesc = prompt("Neue Beschreibung:", item.description);
-      if (newDesc === null) return;
-
-      try {
-        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
-        await updateDoc(itemRef, {
-          name: newName,
-          price: newPrice,
-          quantity: newQuantity,
-          description: newDesc
-        });
-        showMessage("Artikel erfolgreich bearbeitet!", 'success');
-      } catch (err) {
-        console.error(err);
-        showMessage("Fehler beim Bearbeiten des Artikels.", 'error');
       }
     }
 
@@ -272,57 +222,40 @@
     }
 
     async function buyItem(item) {
-  if (item.price > userBalance) {
-    showMessage("Nicht genug Guthaben!", 'error');
-    return;
-  }
-  if (item.quantity <= 0) {
-    showMessage("Artikel nicht mehr verfügbar!", 'error');
-    return;
-  }
+      if (item.price > userBalance) {
+        showMessage("Nicht genug Guthaben!", 'error');
+        return;
+      }
+      if (item.quantity <= 0) {
+        showMessage("Artikel nicht mehr verfügbar!", 'error');
+        return;
+      }
 
-  try {
-    const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
-    await updateDoc(itemRef, { quantity: item.quantity - 1 });
+      try {
+        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
+        await updateDoc(itemRef, { quantity: item.quantity - 1 });
 
-    const newBalance = parseFloat((userBalance - item.price).toFixed(2));
-    const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-    await updateDoc(buyerDocRef, { balance: newBalance });
+        const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
+        await updateDoc(buyerDocRef, { balance: userBalance - item.price });
 
-    userBalance = newBalance; // sofort aktualisieren für UI
+        const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
+        const sellerSnap = await getDoc(sellerBalanceRef);
+        if (sellerSnap.exists()) {
+          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
+        } else {
+          await setDoc(sellerBalanceRef, { balance: item.price });
+        }
 
-    const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
-    const sellerSnap = await getDoc(sellerBalanceRef);
-    if (sellerSnap.exists()) {
-      const updatedSellerBalance = parseFloat((sellerSnap.data().balance + item.price).toFixed(2));
-      await updateDoc(sellerBalanceRef, { balance: updatedSellerBalance });
-    } else {
-      await setDoc(sellerBalanceRef, { balance: item.price });
+        showMessage("Kauf erfolgreich!", 'success');
+      } catch (err) {
+        console.error(err);
+        showMessage("Fehler beim Kauf.", 'error');
+      }
     }
-
-    showMessage("Kauf erfolgreich!", 'success');
-  } catch (err) {
-    console.error(err);
-    showMessage("Fehler beim Kauf.", 'error');
-  }
-}
 
     addItemForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = document.getElementById("itemName").value;
-
-      // Admin aktivieren/deaktivieren
-      if (name === "ADMIN_J123") {
-        toggleAdminMode(true);
-        addItemForm.reset();
-        return;
-      }
-      if (name === "ADMIN_D123") {
-        toggleAdminMode(false);
-        addItemForm.reset();
-        return;
-      }
-
       const price = parseFloat(document.getElementById("itemPrice").value);
       const quantity = parseInt(document.getElementById("itemQuantity").value);
       const imageUrls = document.getElementById("itemImages").value.split(",").map(url => url.trim());
@@ -353,3 +286,6 @@
   </script>
 </body>
 </html>
+
+
+mach, dass wenn man in der artikelbezeichnung "ADMIN_J123" eingibt man in den admin modus kommt in dem man auch nicht eigene artikel löschen kann.
