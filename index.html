@@ -35,6 +35,9 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
 
+  <!-- Nachrichtenleiste -->
+  <div id="messageBar" class="fixed top-0 left-1/2 -translate-x-1/2 z-50 mt-4 p-4 rounded-lg text-white font-bold text-center transition-all duration-300 transform scale-0 opacity-0"></div>
+
   <div class="container mx-auto p-6 bg-white rounded-xl shadow-lg">
     <h1 class="text-4xl md:text-5xl font-extrabold text-center text-gray-800 mb-2">Mein Online-Marktplatz</h1>
     <p class="text-center text-gray-500 mb-6 md:text-lg">Biete Artikel an und finde tolle Angebote!</p>
@@ -42,11 +45,6 @@
     <div id="userInfo" class="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-600 mb-6 p-2 bg-gray-200 rounded-lg">
       <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
       <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> €</p>
-    </div>
-
-    <div class="flex justify-center mb-6">
-      <button id="showItemsBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md mr-2">Aktuelle Angebote</button>
-      <button id="showHistoryBtn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg font-bold hover:bg-gray-400 transition-colors shadow-md">Meine Transaktionen</button>
     </div>
 
     <form id="addItemForm" class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
@@ -61,22 +59,13 @@
       <button type="submit" class="w-full mt-6 p-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">Artikel posten</button>
     </form>
 
+    <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
     <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      </div>
-
-    <div id="historyContainer" class="hidden">
-      <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Meine Transaktionen</h2>
-      <div id="soldItemsContainer" class="mt-4">
-        <h3 class="text-2xl font-semibold text-gray-700 mb-2">Verkaufte Artikel</h3>
-        <p id="noSoldItems" class="text-gray-500 italic hidden">Du hast noch keine Artikel verkauft.</p>
-      </div>
-      <div id="boughtItemsContainer" class="mt-6">
-        <h3 class="text-2xl font-semibold text-gray-700 mb-2">Gekaufte Artikel</h3>
-        <p id="noBoughtItems" class="text-gray-500 italic hidden">Du hast noch keine Artikel gekauft.</p>
-      </div>
+      <!-- Artikel werden hier dynamisch eingefügt -->
     </div>
   </div>
 
+  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -99,18 +88,20 @@
 
     const addItemForm = document.getElementById("addItemForm");
     const itemsContainer = document.getElementById("itemsContainer");
-    const historyContainer = document.getElementById("historyContainer");
-    const soldItemsContainer = document.getElementById("soldItemsContainer");
-    const boughtItemsContainer = document.getElementById("boughtItemsContainer");
-    const noSoldItems = document.getElementById("noSoldItems");
-    const noBoughtItems = document.getElementById("noBoughtItems");
     const currentUserIdSpan = document.getElementById("currentUserId");
     const currentBalanceSpan = document.getElementById("currentBalance");
-    const showItemsBtn = document.getElementById("showItemsBtn");
-    const showHistoryBtn = document.getElementById("showHistoryBtn");
+    const messageBar = document.getElementById("messageBar");
 
     let userId;
     let userBalance = 0;
+
+    function showMessage(msg, type = 'success') {
+      messageBar.textContent = msg;
+      messageBar.className = `fixed top-0 left-1/2 -translate-x-1/2 z-50 mt-4 p-4 rounded-lg text-white font-bold text-center transition-all duration-300 transform scale-100 opacity-100 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+      setTimeout(() => {
+        messageBar.className = `fixed top-0 left-1/2 -translate-x-1/2 z-50 mt-4 p-4 rounded-lg text-white font-bold text-center transition-all duration-300 transform scale-0 opacity-0`;
+      }, 3000);
+    }
 
     async function authenticate() {
       try {
@@ -119,9 +110,8 @@
         currentUserIdSpan.textContent = userId;
         listenForUserBalance();
         listenForItems();
-        listenForHistory();
       } catch (error) {
-        alert("Fehler bei der Anmeldung: " + error.message);
+        showMessage("Fehler bei der Anmeldung: " + error.message, 'error');
       }
     }
 
@@ -149,34 +139,9 @@
       });
     };
 
-    const listenForHistory = () => {
-      const historyCollectionRef = collection(db, `artifacts/${appId}/public/data/history`);
-      onSnapshot(historyCollectionRef, (querySnapshot) => {
-        soldItemsContainer.innerHTML = '<h3 class="text-2xl font-semibold text-gray-700 mb-2">Verkaufte Artikel</h3>';
-        boughtItemsContainer.innerHTML = '<h3 class="text-2xl font-semibold text-gray-700 mb-2">Gekaufte Artikel</h3>';
-        let soldFound = false;
-        let boughtFound = false;
-
-        querySnapshot.forEach((docSnap) => {
-          const transaction = docSnap.data();
-          if (transaction.sellerId === userId) {
-            renderHistoryItem(transaction, 'sold');
-            soldFound = true;
-          }
-          if (transaction.buyerId === userId) {
-            renderHistoryItem(transaction, 'bought');
-            boughtFound = true;
-          }
-        });
-
-        noSoldItems.style.display = soldFound ? 'none' : 'block';
-        noBoughtItems.style.display = boughtFound ? 'none' : 'block';
-      });
-    };
-
     const renderItem = (item) => {
       const card = document.createElement("div");
-      card.className = "bg-white rounded-xl shadow-md p-4 cursor-pointer hover:shadow-lg transition-shadow relative";
+      card.className = "bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow relative";
       card.innerHTML = `
         <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-full h-48 object-cover rounded-md mb-4">
         <h3 class="text-xl font-bold text-gray-800">${item.name}</h3>
@@ -185,39 +150,25 @@
         <p class="text-xs text-gray-400">Verkäufer: ${item.sellerId}</p>
         <p class="text-xs text-gray-500">Menge: ${item.quantity}</p>
       `;
-      card.addEventListener("click", () => showItemDetails(item));
 
       if (item.sellerId === userId) {
         const deleteButton = document.createElement("button");
-        deleteButton.className = "absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors";
-        deleteButton.innerHTML = '&times;';
-        deleteButton.title = 'Anzeige löschen';
-        deleteButton.addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteItem(item.id);
+        deleteButton.className = "absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors";
+        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.728-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 112 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+        </svg>`;
+        deleteButton.title = "Anzeige löschen";
+        deleteButton.addEventListener("click", (e) => {
+          e.stopPropagation(); // Verhindert, dass die Detailansicht geöffnet wird
+          if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
+            deleteItem(item.id);
+          }
         });
         card.appendChild(deleteButton);
       }
-
+      
+      card.addEventListener("click", () => showItemDetails(item));
       itemsContainer.appendChild(card);
-    };
-
-    const renderHistoryItem = (transaction, type) => {
-      const card = document.createElement("div");
-      card.className = "bg-white rounded-xl shadow-md p-4 mb-4";
-      const timestamp = new Date(transaction.timestamp).toLocaleString();
-      card.innerHTML = `
-        <h4 class="text-lg font-bold">${transaction.itemName}</h4>
-        <p class="text-gray-600">Preis: ${transaction.price.toFixed(2)} €</p>
-        <p class="text-gray-600">Menge: ${transaction.quantity}</p>
-        <p class="text-gray-600">Datum: ${timestamp}</p>
-        ${type === 'bought' ? `<p class="text-gray-600">Gekauft von: ${transaction.sellerId}</p>` : `<p class="text-gray-600">Verkauft an: ${transaction.buyerId}</p>`}
-      `;
-      if (type === 'sold') {
-        soldItemsContainer.appendChild(card);
-      } else {
-        boughtItemsContainer.appendChild(card);
-      }
     };
 
     function showItemDetails(item) {
@@ -236,6 +187,7 @@
           <p class="text-sm text-gray-500 mb-4">Verkäufer: ${item.sellerId}</p>
           <p class="text-sm text-gray-500 mb-6">Verfügbar: ${item.quantity} Stück</p>
           <button id="buyItemBtn" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Kaufen</button>
+          ${item.sellerId === userId ? `<button id="deleteItemBtn" class="w-full mt-2 px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">Löschen</button>` : ''}
         </div>
       `;
 
@@ -247,15 +199,35 @@
         await buyItem(item);
         modal.remove();
       });
+
+      if (item.sellerId === userId) {
+        modal.querySelector("#deleteItemBtn").addEventListener("click", () => {
+          if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
+            deleteItem(item.id);
+            modal.remove();
+          }
+        });
+      }
+    }
+
+    async function deleteItem(itemId) {
+      try {
+        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${itemId}`);
+        await deleteDoc(itemRef);
+        showMessage("Artikel erfolgreich gelöscht!", 'success');
+      } catch (err) {
+        console.error(err);
+        showMessage("Fehler beim Löschen des Artikels.", 'error');
+      }
     }
 
     async function buyItem(item) {
       if (item.price > userBalance) {
-        alert("Nicht genug Guthaben!");
+        showMessage("Nicht genug Guthaben!", 'error');
         return;
       }
       if (item.quantity <= 0) {
-        alert("Artikel nicht mehr verfügbar!");
+        showMessage("Artikel nicht mehr verfügbar!", 'error');
         return;
       }
 
@@ -274,35 +246,10 @@
           await setDoc(sellerBalanceRef, { balance: item.price });
         }
 
-        const transaction = {
-          itemId: item.id,
-          itemName: item.name,
-          price: item.price,
-          quantity: 1,
-          sellerId: item.sellerId,
-          buyerId: userId,
-          timestamp: Date.now()
-        };
-        const historyCollectionRef = collection(db, `artifacts/${appId}/public/data/history`);
-        await addDoc(historyCollectionRef, transaction);
-
-        alert("Kauf erfolgreich!");
+        showMessage("Kauf erfolgreich!", 'success');
       } catch (err) {
         console.error(err);
-        alert("Fehler beim Kauf.");
-      }
-    }
-
-    async function deleteItem(itemId) {
-      if (confirm('Bist du sicher, dass du diese Anzeige löschen möchtest?')) {
-        try {
-          const itemRef = doc(db, `artifacts/${appId}/public/data/products/${itemId}`);
-          await deleteDoc(itemRef);
-          alert("Anzeige erfolgreich gelöscht.");
-        } catch (err) {
-          console.error(err);
-          alert("Fehler beim Löschen der Anzeige.");
-        }
+        showMessage("Fehler beim Kauf.", 'error');
       }
     }
 
@@ -328,31 +275,11 @@
         const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
         await addDoc(itemsCollectionRef, item);
         addItemForm.reset();
-        alert("Artikel erfolgreich gepostet!");
+        showMessage("Artikel erfolgreich gepostet!", 'success');
       } catch (err) {
         console.error(err);
-        alert("Fehler beim Posten des Artikels.");
+        showMessage("Fehler beim Posten des Artikels.", 'error');
       }
-    });
-
-    showItemsBtn.addEventListener('click', () => {
-      itemsContainer.classList.remove('hidden');
-      addItemForm.classList.remove('hidden');
-      historyContainer.classList.add('hidden');
-      showItemsBtn.classList.replace('bg-gray-300', 'bg-blue-600');
-      showItemsBtn.classList.replace('text-gray-800', 'text-white');
-      showHistoryBtn.classList.replace('bg-blue-600', 'bg-gray-300');
-      showHistoryBtn.classList.replace('text-white', 'text-gray-800');
-    });
-
-    showHistoryBtn.addEventListener('click', () => {
-      itemsContainer.classList.add('hidden');
-      addItemForm.classList.add('hidden');
-      historyContainer.classList.remove('hidden');
-      showHistoryBtn.classList.replace('bg-gray-300', 'bg-blue-600');
-      showHistoryBtn.classList.replace('text-gray-800', 'text-white');
-      showItemsBtn.classList.replace('bg-blue-600', 'bg-gray-300');
-      showItemsBtn.classList.replace('text-white', 'text-gray-800');
     });
 
     authenticate();
