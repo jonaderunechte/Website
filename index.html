@@ -1,404 +1,163 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mein Online-Marktplatz</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        .container {
-            max-width: 1200px;
-        }
-        .clickable-card {
-            cursor: pointer;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mein Online-Marktplatz</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+    }
+    .container {
+      max-width: 1200px;
+    }
+    .clickable-card {
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
 
-    <!-- Hauptcontainer der Anwendung -->
-    <div class="container mx-auto p-6 bg-white rounded-xl shadow-lg">
-        <h1 class="text-4xl md:text-5xl font-extrabold text-center text-gray-800 mb-2">Mein Online-Marktplatz</h1>
-        <p class="text-center text-gray-500 mb-6 md:text-lg">Biete Artikel an und finde tolle Angebote!</p>
-        
-        <!-- Nutzer-ID und Guthaben-Anzeige -->
-        <div id="userInfo" class="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-600 mb-6 p-2 bg-gray-200 rounded-lg">
-            <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
-            <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> €</p>
-        </div>
+  <div class="container mx-auto p-6 bg-white rounded-xl shadow-lg">
+    <h1 class="text-4xl md:text-5xl font-extrabold text-center text-gray-800 mb-2">Mein Online-Marktplatz</h1>
+    <p class="text-center text-gray-500 mb-6 md:text-lg">Biete Artikel an und finde tolle Angebote!</p>
 
-        <!-- Formular zum Einstellen eines neuen Artikels -->
-        <form id="addItemForm" class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
-            <h2 class="text-2xl font-bold text-gray-700 mb-4">Artikel anbieten</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" id="itemName" placeholder="Artikelbezeichnung" required
-                       class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                <input type="number" id="itemPrice" placeholder="Preis in € (z.B. 9.99)" step="0.01" required
-                       class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-            </div>
-            <input type="number" id="itemQuantity" placeholder="Menge" required
-                   class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-            <textarea id="itemImages" placeholder="Bild-URLs (durch Komma getrennt)" required
-                      class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
-            <textarea id="itemDescription" placeholder="Artikelbeschreibung" required
-                      class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
-            
-            <button type="submit" class="w-full mt-6 p-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">
-                Artikel posten
-            </button>
-        </form>
-
-        <!-- Liste der angebotenen Artikel -->
-        <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
-        <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Artikel werden hier dynamisch eingefügt -->
-        </div>
-
-        <!-- Meldungs-Modal -->
-        <div id="messageModal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full text-center">
-                <p id="modalMessage" class="text-lg font-semibold text-gray-800 mb-4"></p>
-                <div id="modalButtons" class="flex justify-center gap-4">
-                    <button id="modalOk" onclick="hideModal()" class="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">OK</button>
-                    <button id="modalConfirm" onclick="" class="hidden w-full p-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Ja, löschen</button>
-                    <button id="modalCancel" onclick="hideModal()" class="hidden w-full p-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors">Abbrechen</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Detail-Modal -->
-        <div id="detailModal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-lg p-6 shadow-xl max-w-2xl w-full flex flex-col md:flex-row gap-6">
-                <div class="w-full md:w-1/2 flex flex-col">
-                    <img id="detailImage" src="" alt="" class="w-full rounded-lg object-cover h-64 md:h-auto mb-4">
-                    <div id="thumbnailContainer" class="flex gap-2 overflow-x-auto">
-                        <!-- Thumbnails werden hier dynamisch eingefügt -->
-                    </div>
-                </div>
-                <div class="flex-1 flex flex-col">
-                    <h2 id="detailName" class="text-3xl font-bold text-gray-800 mb-2"></h2>
-                    <p class="text-2xl font-bold text-green-600 mb-4"><span id="detailPrice"></span> €</p>
-                    <p id="detailDescription" class="text-gray-600 flex-1 overflow-y-auto mb-4"></p>
-                    <p class="text-gray-400 text-sm mb-2">Verkäufer: <span id="detailSeller"></span></p>
-                    <div class="flex items-center gap-2 text-gray-500 text-sm mb-4">
-                        Menge verfügbar: <span id="detailQuantity" class="font-bold"></span>
-                    </div>
-                    <button id="buyButton" class="w-full p-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">
-                        Kaufen
-                    </button>
-                    <button onclick="hideDetailModal()" class="w-full mt-2 p-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors">
-                        Zurück
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div id="userInfo" class="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-600 mb-6 p-2 bg-gray-200 rounded-lg">
+      <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
+      <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> €</p>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Debug-Logging für Firestore
-        setLogLevel('Debug');
+    <form id="addItemForm" class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
+      <h2 class="text-2xl font-bold text-gray-700 mb-4">Artikel anbieten</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="text" id="itemName" placeholder="Artikelbezeichnung" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+        <input type="number" id="itemPrice" placeholder="Preis in € (z.B. 9.99)" step="0.01" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+      </div>
+      <input type="number" id="itemQuantity" placeholder="Menge" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+      <textarea id="itemImages" placeholder="Bild-URLs (durch Komma getrennt)" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
+      <textarea id="itemDescription" placeholder="Artikelbeschreibung" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
+      <button type="submit" class="w-full mt-6 p-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">Artikel posten</button>
+    </form>
 
-        // Globale Variablen aus der Canvas-Umgebung
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
+    <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Artikel werden hier dynamisch eingefügt -->
+    </div>
+  </div>
 
-        // Firebase Initialisierung
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        let userId;
-        let userBalance = 0; // Globale Variable für das Guthaben
+    // 🔧 TODO: Trage hier deine Firebase-Konfiguration ein
+    const firebaseConfig = {
+      apiKey:AIzaSyCxq5QQU-H-gjbzaDqveRZOh6-dI452wuI,
+      authDomain: website-market-2a947.firebaseapp.com,
+      projectId: website-market-2a947,
+      storageBucket: website-market-2a947.firebasestorage.app,
+      messagingSenderId: 314261738277,
+      appId: 1:314261738277:web:a50c116a423d63455300cc
+    };
 
-        // UI-Elemente
-        const addItemForm = document.getElementById('addItemForm');
-        const itemsContainer = document.getElementById('itemsContainer');
-        const currentUserIdSpan = document.getElementById('currentUserId');
-        const currentBalanceSpan = document.getElementById('currentBalance');
-        const messageModal = document.getElementById('messageModal');
-        const modalMessage = document.getElementById('modalMessage');
-        const modalOk = document.getElementById('modalOk');
-        const modalConfirm = document.getElementById('modalConfirm');
-        const modalCancel = document.getElementById('modalCancel');
-        
-        const detailModal = document.getElementById('detailModal');
-        const detailImage = document.getElementById('detailImage');
-        const detailName = document.getElementById('detailName');
-        const detailPrice = document.getElementById('detailPrice');
-        const detailDescription = document.getElementById('detailDescription');
-        const detailSeller = document.getElementById('detailSeller');
-        const detailQuantity = document.getElementById('detailQuantity');
-        const buyButton = document.getElementById('buyButton');
-        const thumbnailContainer = document.getElementById('thumbnailContainer');
+    const appId = "mein-marktplatz";
 
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-        // Funktion zum Anzeigen des Melde-Modals
-        window.showModal = (message) => {
-            modalMessage.textContent = message;
-            modalOk.classList.remove('hidden');
-            modalConfirm.classList.add('hidden');
-            modalCancel.classList.add('hidden');
-            messageModal.classList.remove('hidden');
-        };
+    const addItemForm = document.getElementById("addItemForm");
+    const itemsContainer = document.getElementById("itemsContainer");
+    const currentUserIdSpan = document.getElementById("currentUserId");
+    const currentBalanceSpan = document.getElementById("currentBalance");
 
-        // Funktion zum Anzeigen des Bestätigungs-Modals
-        const showConfirmationModal = (message, confirmHandler) => {
-            modalMessage.textContent = message;
-            modalOk.classList.add('hidden');
-            modalConfirm.classList.remove('hidden');
-            modalCancel.classList.remove('hidden');
-            modalConfirm.onclick = confirmHandler;
-            messageModal.classList.remove('hidden');
-        };
+    let userId;
+    let userBalance = 0;
 
-        // Funktion zum Verstecken des Melde-Modals
-        window.hideModal = () => {
-            messageModal.classList.add('hidden');
-        };
-        
-        // Funktion zum Anzeigen des Detail-Modals
-        window.showDetailModal = (item) => {
-            detailImage.src = item.imageUrls[0];
-            detailImage.alt = item.name;
-            detailName.textContent = item.name;
-            detailPrice.textContent = item.price.toFixed(2);
-            detailDescription.textContent = item.description;
-            detailSeller.textContent = item.sellerId;
-            detailQuantity.textContent = item.quantity;
+    async function authenticate() {
+      try {
+        await signInAnonymously(auth);
+        userId = auth.currentUser.uid;
+        currentUserIdSpan.textContent = userId;
+        listenForUserBalance();
+        listenForItems();
+      } catch (error) {
+        alert("Fehler bei der Anmeldung: " + error.message);
+      }
+    }
 
-            // Thumbnails rendern
-            thumbnailContainer.innerHTML = '';
-            item.imageUrls.forEach(url => {
-                const thumbnail = document.createElement('img');
-                thumbnail.src = url;
-                thumbnail.className = 'w-16 h-16 rounded-md object-cover cursor-pointer hover:scale-110 transition-transform';
-                thumbnail.onclick = () => {
-                    detailImage.src = url;
-                };
-                thumbnailContainer.appendChild(thumbnail);
-            });
-            
-            // Setzt den Kaufen-Button im Detail-Modal
-            if (item.quantity <= 0) {
-                buyButton.textContent = 'Ausverkauft';
-                buyButton.classList.add('bg-gray-400', 'cursor-not-allowed');
-                buyButton.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
-                buyButton.disabled = true;
-            } else {
-                buyButton.textContent = 'Kaufen';
-                buyButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                buyButton.classList.add('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
-                buyButton.disabled = false;
-            }
-
-            buyButton.onclick = async () => {
-                 // Wichtige Hinzufügung: Überprüfung, ob der Artikel noch verfügbar ist, direkt vor dem Kauf.
-                 const itemDocRef = doc(db, `artifacts/${appId}/public/data/products`, item.id);
-                 const itemSnap = await getDoc(itemDocRef);
-                 if (!itemSnap.exists() || itemSnap.data().quantity <= 0) {
-                     showModal("Dieser Artikel ist leider ausverkauft.");
-                     return;
-                 }
-                
-                 if (userBalance < item.price) {
-                    showModal("Nicht genügend Geld, um diesen Artikel zu kaufen.");
-                    return;
-                }
-                
-                try {
-                    const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-                    
-                    await updateDoc(itemDocRef, {
-                        quantity: item.quantity - 1,
-                    });
-                    
-                    await updateDoc(userDocRef, {
-                        balance: userBalance - item.price
-                    });
-                    hideDetailModal();
-                    showModal("Artikel erfolgreich gekauft!");
-
-                } catch (e) {
-                    console.error("Fehler beim Kauf des Artikels:", e);
-                    showModal("Beim Kauf ist ein Fehler aufgetreten. Bitte erneut versuchen.");
-                }
-            }
-
-            detailModal.classList.remove('hidden');
-        };
-
-        // Funktion zum Verstecken des Detail-Modals
-        window.hideDetailModal = () => {
-            detailModal.classList.add('hidden');
-        };
-
-
-        // Firebase-Authentifizierung
-        async function authenticate() {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                userId = auth.currentUser.uid;
-                currentUserIdSpan.textContent = userId;
-                // Starte das Echtzeit-Listening nach der Authentifizierung
-                listenForUserBalance();
-                listenForItems();
-            } catch (error) {
-                console.error("Fehler bei der Authentifizierung:", error);
-                showModal("Authentifizierungsfehler. Bitte versuchen Sie es später erneut.");
-            }
+    const listenForUserBalance = () => {
+      const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
+      onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          userBalance = docSnap.data().balance;
+        } else {
+          userBalance = 1000;
+          setDoc(userDocRef, { balance: userBalance });
         }
+        currentBalanceSpan.textContent = userBalance.toFixed(2);
+      });
+    };
 
-        // Funktion zum Laden und Aktualisieren des Benutzerguthabens in Echtzeit
-        const listenForUserBalance = () => {
-            const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-            onSnapshot(userDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    userBalance = docSnap.data().balance;
-                } else {
-                    // Wenn kein Guthaben-Dokument existiert, erstelle es mit einem Startwert
-                    userBalance = 1000;
-                    setDoc(userDocRef, { balance: userBalance })
-                        .catch(e => console.error("Fehler beim Erstellen des Guthaben-Dokuments:", e));
-                }
-                currentBalanceSpan.textContent = userBalance.toFixed(2); // Guthaben in der UI anzeigen
-            }, (error) => {
-                console.error("Fehler beim Abrufen des Guthabens:", error);
-                showModal("Fehler beim Laden deines Guthabens. Bitte die Seite neu laden.");
-            });
-        };
-
-        // Artikel-Karten dynamisch rendern
-        const renderItem = (item) => {
-            const isSoldOut = item.quantity <= 0;
-            const isUserItem = item.sellerId === userId;
-            
-            const card = document.createElement('div');
-            card.className = `bg-white rounded-xl shadow-md overflow-hidden transition-transform transform ${isSoldOut ? 'opacity-70' : ''} clickable-card relative`;
-            
-            let badgeHtml = '';
-            if (isUserItem) {
-                badgeHtml = `<span class="absolute top-2 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">Deine Anzeige</span>`;
-            }
-
-            let deleteButtonHtml = '';
-            if (isUserItem) {
-                 deleteButtonHtml = `<button class="delete-button absolute bottom-2 left-1/2 -translate-x-1/2 p-2 bg-red-600 text-white rounded-full transition-colors hover:bg-red-700 shadow-lg z-20" data-item-id="${item.id}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
-                    </svg>
-                 </button>`;
-            }
-
-            card.innerHTML = `
-                ${badgeHtml}
-                <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-full h-48 object-cover object-center">
-                <div class="p-4">
-                    <h3 class="text-xl font-semibold text-gray-800">${item.name}</h3>
-                    <p class="text-2xl font-bold text-green-600 my-2">${item.price.toFixed(2)} €</p>
-                    <p class="text-gray-600 text-sm h-16 overflow-hidden">${item.description}</p>
-                    <p class="text-gray-400 text-xs mt-2 truncate">Verkäufer: ${item.sellerId}</p>
-                    <p class="text-gray-500 text-sm mt-2">Menge: ${item.quantity}</p>
-                </div>
-                ${deleteButtonHtml}
-            `;
-            
-            // Event-Listener für das Öffnen der Detailansicht, jetzt für die gesamte Karte
-            card.addEventListener('click', (e) => {
-                if (!e.target.closest('.delete-button')) {
-                    showDetailModal(item);
-                }
-            });
-
-            // Event-Listener für den Lösch-Button
-            const deleteButton = card.querySelector('.delete-button');
-            if (deleteButton) {
-                deleteButton.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Verhindert, dass der Klick die Detailansicht öffnet
-                    const itemId = deleteButton.dataset.itemId;
-                    showConfirmationModal("Möchtest du diese Anzeige wirklich löschen?", async () => {
-                        try {
-                            const itemDocRef = doc(db, `artifacts/${appId}/public/data/products`, itemId);
-                            await deleteDoc(itemDocRef);
-                            hideModal();
-                            showModal("Anzeige erfolgreich gelöscht.");
-                        } catch (e) {
-                            console.error("Fehler beim Löschen der Anzeige:", e);
-                            hideModal();
-                            showModal("Beim Löschen ist ein Fehler aufgetreten.");
-                        }
-                    });
-                });
-            }
-            
-            itemsContainer.appendChild(card);
-        };
-
-        // Funktion zum Laden und Aktualisieren der Artikel in Echtzeit
-        const listenForItems = () => {
-            const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
-            onSnapshot(itemsCollectionRef, (querySnapshot) => {
-                itemsContainer.innerHTML = ''; // Vorherige Artikel entfernen
-                querySnapshot.forEach((doc) => {
-                    const item = { id: doc.id, ...doc.data() };
-                    renderItem(item);
-                });
-            }, (error) => {
-                console.error("Fehler beim Abrufen der Artikel in Echtzeit:", error);
-                showModal("Fehler beim Laden der Artikel. Bitte die Seite neu laden.");
-            });
-        };
-
-        // Event-Listener für das Formular
-        addItemForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const itemName = document.getElementById('itemName').value;
-            const itemPrice = document.getElementById('itemPrice').value;
-            const itemQuantity = document.getElementById('itemQuantity').value;
-            const itemImages = document.getElementById('itemImages').value.split(',').map(url => url.trim());
-            const itemDescription = document.getElementById('itemDescription').value;
-
-            // Ein neues Dokument in der Firestore-Sammlung erstellen
-            const newDoc = {
-                name: itemName,
-                price: parseFloat(itemPrice),
-                quantity: parseInt(itemQuantity),
-                imageUrls: itemImages,
-                description: itemDescription,
-                sellerId: userId, // Die ID des Verkäufers speichern
-                timestamp: Date.now()
-            };
-
-            try {
-                // Artikel zur "products"-Sammlung hinzufügen
-                const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
-                await addDoc(itemsCollectionRef, newDoc);
-                addItemForm.reset();
-                showModal("Artikel wurde erfolgreich gepostet!");
-            } catch (e) {
-                console.error("Fehler beim Hinzufügen des Artikels:", e);
-                showModal("Beim Posten des Artikels ist ein Fehler aufgetreten.");
-            }
+    const listenForItems = () => {
+      const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
+      onSnapshot(itemsCollectionRef, (querySnapshot) => {
+        itemsContainer.innerHTML = '';
+        querySnapshot.forEach((docSnap) => {
+          const item = { id: docSnap.id, ...docSnap.data() };
+          renderItem(item);
         });
+      });
+    };
 
-        // App starten
-        authenticate();
-    </script>
+    const renderItem = (item) => {
+      const card = document.createElement("div");
+      card.className = "bg-white rounded-xl shadow-md p-4 cursor-pointer hover:shadow-lg transition-shadow";
+      card.innerHTML = `
+        <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-full h-48 object-cover rounded-md mb-4">
+        <h3 class="text-xl font-bold text-gray-800">${item.name}</h3>
+        <p class="text-green-600 text-lg font-semibold">${item.price.toFixed(2)} €</p>
+        <p class="text-sm text-gray-600 mb-2 truncate">${item.description}</p>
+        <p class="text-xs text-gray-400">Verkäufer: ${item.sellerId}</p>
+        <p class="text-xs text-gray-500">Menge: ${item.quantity}</p>
+      `;
+      itemsContainer.appendChild(card);
+    };
+
+    addItemForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("itemName").value;
+      const price = parseFloat(document.getElementById("itemPrice").value);
+      const quantity = parseInt(document.getElementById("itemQuantity").value);
+      const imageUrls = document.getElementById("itemImages").value.split(",").map(url => url.trim());
+      const description = document.getElementById("itemDescription").value;
+
+      const item = {
+        name,
+        price,
+        quantity,
+        imageUrls,
+        description,
+        sellerId: userId,
+        timestamp: Date.now()
+      };
+
+      try {
+        const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
+        await addDoc(itemsCollectionRef, item);
+        addItemForm.reset();
+        alert("Artikel erfolgreich gepostet!");
+      } catch (err) {
+        console.error(err);
+        alert("Fehler beim Posten des Artikels.");
+      }
+    });
+
+    authenticate();
+  </script>
 </body>
 </html>
