@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -217,7 +219,6 @@
           <p class="mb-4">${item.description}</p>
           <p class="text-sm text-gray-500 mb-4">Verkäufer: ${item.sellerId}</p>
           <p class="text-sm text-gray-500 mb-6">Verfügbar: ${item.quantity} Stück</p>
-          <input type="number" id="buyQuantity" min="1" max="${item.quantity}" value="1" class="w-full p-2 mb-4 border rounded" placeholder="Menge">
           <button id="buyItemBtn" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Kaufen</button>
           ${(item.sellerId === userId || isAdmin) ? `
             <button id="editItemBtn" class="w-full mt-2 px-4 py-3 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition">Bearbeiten</button>
@@ -229,8 +230,7 @@
 
       modal.querySelector("#closeModal").addEventListener("click", () => modal.remove());
       modal.querySelector("#buyItemBtn").addEventListener("click", async () => {
-        const quantity = parseInt(modal.querySelector("#buyQuantity").value);
-        await buyItem(item, quantity);
+        await buyItem(item);
         modal.remove();
       });
 
@@ -248,38 +248,73 @@
       }
     }
 
-    async function buyItem(item, quantity) {
-      if (item.price * quantity > userBalance) {
+    async function editItem(item) {
+      const newName = prompt("Neuer Name:", item.name);
+      if (newName === null) return;
+      const newPrice = parseFloat(prompt("Neuer Preis:", item.price));
+      if (isNaN(newPrice) || newPrice < 0) { showMessage("Ungültiger Preis!", "error"); return; }
+      const newQuantity = parseInt(prompt("Neue Menge:", item.quantity));
+      if (isNaN(newQuantity) || newQuantity < 0) { showMessage("Ungültige Menge!", "error"); return; }
+      const newDesc = prompt("Neue Beschreibung:", item.description);
+      if (newDesc === null) return;
+
+      try {
+        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
+        await updateDoc(itemRef, {
+          name: newName,
+          price: newPrice,
+          quantity: newQuantity,
+          description: newDesc
+        });
+        showMessage("Artikel erfolgreich bearbeitet!", 'success');
+      } catch (err) {
+        console.error(err);
+        showMessage("Fehler beim Bearbeiten des Artikels.", 'error');
+      }
+    }
+
+    async function deleteItem(itemId) {
+      try {
+        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${itemId}`);
+        await deleteDoc(itemRef);
+        showMessage("Artikel erfolgreich gelöscht!", 'success');
+      } catch (err) {
+        console.error(err);
+        showMessage("Fehler beim Löschen des Artikels.", 'error');
+      }
+    }
+
+    async function buyItem(item) {
+      if (item.price > userBalance) {
         showMessage("Nicht genug Guthaben!", 'error');
         return;
       }
-      if (item.quantity < quantity) {
-        showMessage("Nicht genügend Artikel verfügbar!", 'error');
+      if (item.quantity <= 0) {
+        showMessage("Artikel nicht mehr verfügbar!", 'error');
         return;
       }
 
       try {
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
         await updateDoc(itemRef, { 
-          quantity: item.quantity - quantity,
+          quantity: item.quantity - 1,
           soldTo: userId,
           buyerId: userId,
-          soldAt: Date.now(),
-          soldQuantity: quantity
+          soldAt: Date.now()
         });
 
         const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-        await updateDoc(buyerDocRef, { balance: userBalance - item.price * quantity });
+        await updateDoc(buyerDocRef, { balance: userBalance - item.price });
 
         const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
         const sellerSnap = await getDoc(sellerBalanceRef);
         if (sellerSnap.exists()) {
-          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price * quantity });
+          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
         } else {
-          await setDoc(sellerBalanceRef, { balance: item.price * quantity });
+          await setDoc(sellerBalanceRef, { balance: item.price });
         }
 
-        showMessage(`Kauf erfolgreich! Menge: ${quantity}`, 'success');
+        showMessage("Kauf erfolgreich!", 'success');
       } catch (err) {
         console.error(err);
         showMessage("Fehler beim Kauf.", 'error');
@@ -380,17 +415,16 @@
           const item = { id: docSnap.id, ...docSnap.data() };
 
           // Verkauft
-          if (item.sellerId === userId && item.soldQuantity) {
+          if (item.sellerId === userId && item.soldTo) {
             const soldCard = document.createElement("div");
             soldCard.className = "p-3 border rounded bg-green-50 flex gap-4";
             soldCard.innerHTML = `
               <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
               <div>
                 <strong>Verkauft:</strong> ${item.name} <br>
-                Preis pro Stück: ${item.price.toFixed(2)} € <br>
+                Preis: ${item.price.toFixed(2)} € <br>
                 An: ${item.soldTo} <br>
-                Menge: ${item.soldQuantity} <br>
-                Gesamt: ${(item.price * item.soldQuantity).toFixed(2)} € <br>
+                Menge: ${item.quantity} <br>
                 Datum: ${new Date(item.soldAt).toLocaleString()}
               </div>
             `;
@@ -398,17 +432,16 @@
           }
 
           // Gekauft
-          if (item.buyerId === userId && item.soldQuantity) {
+          if (item.buyerId === userId) {
             const boughtCard = document.createElement("div");
             boughtCard.className = "p-3 border rounded bg-blue-50 flex gap-4";
             boughtCard.innerHTML = `
               <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
               <div>
                 <strong>Gekauft:</strong> ${item.name} <br>
-                Preis pro Stück: ${item.price.toFixed(2)} € <br>
+                Preis: ${item.price.toFixed(2)} € <br>
                 Von: ${item.sellerId} <br>
-                Menge: ${item.soldQuantity} <br>
-                Gesamt: ${(item.price * item.soldQuantity).toFixed(2)} € <br>
+                Menge: ${item.quantity} <br>
                 Datum: ${new Date(item.soldAt).toLocaleString()}
               </div>
             `;
