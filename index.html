@@ -272,36 +272,40 @@
     }
 
     async function buyItem(item) {
-      if (item.price > userBalance) {
-        showMessage("Nicht genug Guthaben!", 'error');
-        return;
-      }
-      if (item.quantity <= 0) {
-        showMessage("Artikel nicht mehr verfügbar!", 'error');
-        return;
-      }
+  if (item.price > userBalance) {
+    showMessage("Nicht genug Guthaben!", 'error');
+    return;
+  }
+  if (item.quantity <= 0) {
+    showMessage("Artikel nicht mehr verfügbar!", 'error');
+    return;
+  }
 
-      try {
-        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
-        await updateDoc(itemRef, { quantity: item.quantity - 1 });
+  try {
+    const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
+    await updateDoc(itemRef, { quantity: item.quantity - 1 });
 
-        const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-        await updateDoc(buyerDocRef, { balance: userBalance - item.price });
+    const newBalance = parseFloat((userBalance - item.price).toFixed(2));
+    const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
+    await updateDoc(buyerDocRef, { balance: newBalance });
 
-        const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
-        const sellerSnap = await getDoc(sellerBalanceRef);
-        if (sellerSnap.exists()) {
-          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
-        } else {
-          await setDoc(sellerBalanceRef, { balance: item.price });
-        }
+    userBalance = newBalance; // sofort aktualisieren für UI
 
-        showMessage("Kauf erfolgreich!", 'success');
-      } catch (err) {
-        console.error(err);
-        showMessage("Fehler beim Kauf.", 'error');
-      }
+    const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
+    const sellerSnap = await getDoc(sellerBalanceRef);
+    if (sellerSnap.exists()) {
+      const updatedSellerBalance = parseFloat((sellerSnap.data().balance + item.price).toFixed(2));
+      await updateDoc(sellerBalanceRef, { balance: updatedSellerBalance });
+    } else {
+      await setDoc(sellerBalanceRef, { balance: item.price });
     }
+
+    showMessage("Kauf erfolgreich!", 'success');
+  } catch (err) {
+    console.error(err);
+    showMessage("Fehler beim Kauf.", 'error');
+  }
+}
 
     addItemForm.addEventListener("submit", async (e) => {
       e.preventDefault();
