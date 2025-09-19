@@ -35,7 +35,6 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
 
-  <!-- Nachrichtenleiste -->
   <div id="messageBar" class="fixed top-0 left-1/2 -translate-x-1/2 z-50 mt-4 p-4 rounded-lg text-white font-bold text-center transition-all duration-300 transform scale-0 opacity-0"></div>
 
   <div class="container mx-auto p-6 bg-white rounded-xl shadow-lg">
@@ -48,7 +47,6 @@
       <p id="adminStatus" class="text-red-600 font-bold hidden">[ADMIN-MODUS]</p>
     </div>
 
-    <!-- Admin-Guthabenkontrolle -->
     <div id="adminBalanceControl" class="hidden mt-4 p-4 bg-yellow-50 rounded-lg shadow-inner">
       <h3 class="text-lg font-bold mb-2 text-gray-700">Guthaben eines Nutzers ändern</h3>
       <input type="text" id="targetUserId" placeholder="Nutzer-ID" class="w-full p-2 mb-2 rounded border border-gray-300">
@@ -72,11 +70,9 @@
 
     <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
     <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Artikel werden hier dynamisch eingefügt -->
-    </div>
+      </div>
   </div>
 
-  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -294,12 +290,20 @@
 
       try {
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
-        await updateDoc(itemRef, { 
-          quantity: item.quantity - 1,
-          soldTo: userId,
+        const transactionCollectionRef = collection(db, `artifacts/${appId}/public/data/transactions`);
+
+        const newQuantity = item.quantity - 1;
+        await updateDoc(itemRef, { quantity: newQuantity });
+
+        const transactionData = {
+          itemId: item.id,
+          itemName: item.name,
+          price: item.price,
+          sellerId: item.sellerId,
           buyerId: userId,
-          soldAt: Date.now()
-        });
+          timestamp: Date.now()
+        };
+        await addDoc(transactionCollectionRef, transactionData);
 
         const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
         await updateDoc(buyerDocRef, { balance: userBalance - item.price });
@@ -404,48 +408,71 @@
       const transactionsContent = modal.querySelector("#transactionsContent");
 
       try {
-        const productsCol = collection(db, `artifacts/${appId}/public/data/products`);
-        const snapshot = await getDocs(productsCol);
+        const transactionsCol = collection(db, `artifacts/${appId}/public/data/transactions`);
+        const snapshot = await getDocs(transactionsCol);
+
+        const soldItems = {};
+        const boughtItems = {};
+
+        snapshot.forEach(docSnap => {
+          const transaction = docSnap.data();
+
+          if (transaction.sellerId === userId) {
+            if (!soldItems[transaction.itemId]) {
+              soldItems[transaction.itemId] = {
+                ...transaction,
+                count: 0
+              };
+            }
+            soldItems[transaction.itemId].count++;
+          }
+
+          if (transaction.buyerId === userId) {
+            if (!boughtItems[transaction.itemId]) {
+              boughtItems[transaction.itemId] = {
+                ...transaction,
+                count: 0
+              };
+            }
+            boughtItems[transaction.itemId].count++;
+          }
+        });
 
         transactionsContent.innerHTML = "";
 
-        snapshot.forEach(docSnap => {
-          const item = { id: docSnap.id, ...docSnap.data() };
+        // Display sold items
+        for (const itemId in soldItems) {
+          const item = soldItems[itemId];
+          const soldCard = document.createElement("div");
+          soldCard.className = "p-3 border rounded bg-green-50 flex gap-4";
+          soldCard.innerHTML = `
+            <img src="${item.imageUrls[0]}" alt="${item.itemName}" class="w-20 h-20 object-cover rounded">
+            <div>
+              <strong>Verkauft:</strong> ${item.itemName} <br>
+              Preis: ${item.price.toFixed(2)} € <br>
+              Anzahl: ${item.count} mal verkauft <br>
+              Datum des letzten Verkaufs: ${new Date(item.timestamp).toLocaleString()}
+            </div>
+          `;
+          transactionsContent.appendChild(soldCard);
+        }
 
-          // Verkauft
-          if (item.sellerId === userId && item.soldTo) {
-            const soldCard = document.createElement("div");
-            soldCard.className = "p-3 border rounded bg-green-50 flex gap-4";
-            soldCard.innerHTML = `
-              <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
-              <div>
-                <strong>Verkauft:</strong> ${item.name} <br>
-                Preis: ${item.price.toFixed(2)} € <br>
-                An: ${item.soldTo} <br>
-                Menge: ${item.quantity} <br>
-                Datum: ${new Date(item.soldAt).toLocaleString()}
-              </div>
-            `;
-            transactionsContent.appendChild(soldCard);
-          }
-
-          // Gekauft
-          if (item.buyerId === userId) {
-            const boughtCard = document.createElement("div");
-            boughtCard.className = "p-3 border rounded bg-blue-50 flex gap-4";
-            boughtCard.innerHTML = `
-              <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
-              <div>
-                <strong>Gekauft:</strong> ${item.name} <br>
-                Preis: ${item.price.toFixed(2)} € <br>
-                Von: ${item.sellerId} <br>
-                Menge: ${item.quantity} <br>
-                Datum: ${new Date(item.soldAt).toLocaleString()}
-              </div>
-            `;
-            transactionsContent.appendChild(boughtCard);
-          }
-        });
+        // Display bought items
+        for (const itemId in boughtItems) {
+          const item = boughtItems[itemId];
+          const boughtCard = document.createElement("div");
+          boughtCard.className = "p-3 border rounded bg-blue-50 flex gap-4";
+          boughtCard.innerHTML = `
+            <img src="${item.imageUrls[0]}" alt="${item.itemName}" class="w-20 h-20 object-cover rounded">
+            <div>
+              <strong>Gekauft:</strong> ${item.itemName} <br>
+              Preis: ${item.price.toFixed(2)} € <br>
+              Anzahl: ${item.count} mal gekauft <br>
+              Datum des letzten Kaufs: ${new Date(item.timestamp).toLocaleString()}
+            </div>
+          `;
+          transactionsContent.appendChild(boughtCard);
+        }
 
         if (transactionsContent.innerHTML === "") {
           transactionsContent.innerHTML = "<p class='text-gray-500'>Keine Transaktionen gefunden.</p>";
@@ -461,6 +488,3 @@
   </script>
 </body>
 </html>
-
-
-ADMIN_D123(zum Verlassen des ADMIN modes)
