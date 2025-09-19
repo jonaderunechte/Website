@@ -69,7 +69,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey:"AIzaSyCxq5QQU-H-gjbzaDqveRZOh6-dI452wuI",
@@ -93,7 +93,6 @@
     const currentBalanceSpan = document.getElementById("currentBalance");
 
     let userId;
-    let userBalance = 0;
 
     async function authenticate() {
       try {
@@ -111,13 +110,11 @@
     const listenForUserBalance = () => {
       const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
       onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          userBalance = docSnap.data().balance;
-        } else {
-          userBalance = 1000;
-          setDoc(userDocRef, { balance: userBalance });
-        }
-        currentBalanceSpan.textContent = userBalance.toFixed(2);
+        let balance = 1000;
+        if(docSnap.exists()) balance = docSnap.data().balance;
+        else setDoc(userDocRef, { balance });
+
+        currentBalanceSpan.textContent = balance.toFixed(2);
       });
     };
 
@@ -153,7 +150,6 @@
 
       const imagesHtml = item.imageUrls.map(url => `<img src="${url}" alt="${item.name}">`).join('');
 
-      // Verkäufer darf löschen
       const deleteButtonHtml = item.sellerId === userId ? `<button id="deleteItemBtn" class="w-full px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition mb-2">Artikel löschen</button>` : '';
 
       modal.innerHTML = `
@@ -189,46 +185,52 @@
     }
 
     async function buyItem(item) {
-      if (item.price > userBalance) { alert("Nicht genug Guthaben!"); return; }
-      if (item.quantity <= 0) { alert("Artikel nicht mehr verfügbar!"); return; }
-
       try {
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
-        await updateDoc(itemRef, { quantity: item.quantity - 1 });
-
         const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-        await updateDoc(buyerDocRef, { balance: userBalance - item.price });
-
         const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
-        const sellerSnap = await getDoc(sellerBalanceRef);
-        if (sellerSnap.exists()) {
-          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
-        } else {
-          await setDoc(sellerBalanceRef, { balance: item.price });
-        }
-
-        // Historie speichern
         const historyCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/history`);
-        await addDoc(historyCollectionRef, {
-          type: 'kauf',
-          itemName: item.name,
-          price: item.price,
-          sellerId: item.sellerId,
-          timestamp: Date.now()
-        });
         const sellerHistoryRef = collection(db, `artifacts/${appId}/users/${item.sellerId}/history`);
-        await addDoc(sellerHistoryRef, {
-          type: 'verkauf',
-          itemName: item.name,
-          price: item.price,
-          buyerId: userId,
-          timestamp: Date.now()
+
+        await runTransaction(db, async (transaction) => {
+          const itemSnap = await transaction.get(itemRef);
+          const buyerSnap = await transaction.get(buyerDocRef);
+          const sellerSnap = await transaction.get(sellerBalanceRef);
+
+          if (!itemSnap.exists() || itemSnap.data().quantity <= 0) throw new Error("Artikel nicht verfügbar");
+          if (!buyerSnap.exists()) throw new Error("Balance nicht gefunden");
+
+          const buyerBalance = buyerSnap.data().balance;
+          if (buyerBalance < item.price) throw new Error("Nicht genug Guthaben");
+
+          const sellerBalance = sellerSnap.exists() ? sellerSnap.data().balance : 0;
+
+          transaction.update(itemRef, { quantity: itemSnap.data().quantity - 1 });
+          transaction.update(buyerDocRef, { balance: buyerBalance - item.price });
+          transaction.set(sellerBalanceRef, { balance: sellerBalance + item.price });
+
+          // Historie speichern
+          transaction.set(doc(historyCollectionRef), {
+            type: 'kauf',
+            itemName: item.name,
+            price: item.price,
+            sellerId: item.sellerId,
+            timestamp: Date.now()
+          });
+
+          transaction.set(doc(sellerHistoryRef), {
+            type: 'verkauf',
+            itemName: item.name,
+            price: item.price,
+            buyerId: userId,
+            timestamp: Date.now()
+          });
         });
 
         alert("Kauf erfolgreich!");
       } catch (err) {
         console.error(err);
-        alert("Fehler beim Kauf.");
+        alert(err.message || "Fehler beim Kauf.");
       }
     }
 
@@ -278,4 +280,4 @@
     authenticate();
   </script>
 </body>
-</html>
+</html> 
