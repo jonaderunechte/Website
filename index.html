@@ -44,6 +44,11 @@
       <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> €</p>
     </div>
 
+    <div class="flex justify-center mb-6">
+      <button id="showItemsBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md mr-2">Aktuelle Angebote</button>
+      <button id="showHistoryBtn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg font-bold hover:bg-gray-400 transition-colors shadow-md">Meine Transaktionen</button>
+    </div>
+
     <form id="addItemForm" class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
       <h2 class="text-2xl font-bold text-gray-700 mb-4">Artikel anbieten</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -56,14 +61,19 @@
       <button type="submit" class="w-full mt-6 p-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">Artikel posten</button>
     </form>
 
-    <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
     <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Artikel werden hier dynamisch eingefügt -->
-    </div>
+      </div>
 
-    <h2 class="text-3xl font-bold text-gray-700 mt-12 mb-4 text-center">Deine Kauf- und Verkaufshistorie</h2>
-    <div id="historyContainer" class="bg-gray-50 p-4 rounded-xl shadow-inner">
-      <!-- Kauf- und Verkaufshistorie wird hier angezeigt -->
+    <div id="historyContainer" class="hidden">
+      <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Meine Transaktionen</h2>
+      <div id="soldItemsContainer" class="mt-4">
+        <h3 class="text-2xl font-semibold text-gray-700 mb-2">Verkaufte Artikel</h3>
+        <p id="noSoldItems" class="text-gray-500 italic hidden">Du hast noch keine Artikel verkauft.</p>
+      </div>
+      <div id="boughtItemsContainer" class="mt-6">
+        <h3 class="text-2xl font-semibold text-gray-700 mb-2">Gekaufte Artikel</h3>
+        <p id="noBoughtItems" class="text-gray-500 italic hidden">Du hast noch keine Artikel gekauft.</p>
+      </div>
     </div>
   </div>
 
@@ -82,15 +92,22 @@
     };
 
     const appId = "mein-marktplatz";
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
     const addItemForm = document.getElementById("addItemForm");
     const itemsContainer = document.getElementById("itemsContainer");
+    const historyContainer = document.getElementById("historyContainer");
+    const soldItemsContainer = document.getElementById("soldItemsContainer");
+    const boughtItemsContainer = document.getElementById("boughtItemsContainer");
+    const noSoldItems = document.getElementById("noSoldItems");
+    const noBoughtItems = document.getElementById("noBoughtItems");
     const currentUserIdSpan = document.getElementById("currentUserId");
     const currentBalanceSpan = document.getElementById("currentBalance");
-    const historyContainer = document.getElementById("historyContainer");
+    const showItemsBtn = document.getElementById("showItemsBtn");
+    const showHistoryBtn = document.getElementById("showHistoryBtn");
 
     let userId;
     let userBalance = 0;
@@ -132,9 +149,34 @@
       });
     };
 
+    const listenForHistory = () => {
+      const historyCollectionRef = collection(db, `artifacts/${appId}/public/data/history`);
+      onSnapshot(historyCollectionRef, (querySnapshot) => {
+        soldItemsContainer.innerHTML = '<h3 class="text-2xl font-semibold text-gray-700 mb-2">Verkaufte Artikel</h3>';
+        boughtItemsContainer.innerHTML = '<h3 class="text-2xl font-semibold text-gray-700 mb-2">Gekaufte Artikel</h3>';
+        let soldFound = false;
+        let boughtFound = false;
+
+        querySnapshot.forEach((docSnap) => {
+          const transaction = docSnap.data();
+          if (transaction.sellerId === userId) {
+            renderHistoryItem(transaction, 'sold');
+            soldFound = true;
+          }
+          if (transaction.buyerId === userId) {
+            renderHistoryItem(transaction, 'bought');
+            boughtFound = true;
+          }
+        });
+
+        noSoldItems.style.display = soldFound ? 'none' : 'block';
+        noBoughtItems.style.display = boughtFound ? 'none' : 'block';
+      });
+    };
+
     const renderItem = (item) => {
       const card = document.createElement("div");
-      card.className = "bg-white rounded-xl shadow-md p-4 cursor-pointer hover:shadow-lg transition-shadow";
+      card.className = "bg-white rounded-xl shadow-md p-4 cursor-pointer hover:shadow-lg transition-shadow relative";
       card.innerHTML = `
         <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-full h-48 object-cover rounded-md mb-4">
         <h3 class="text-xl font-bold text-gray-800">${item.name}</h3>
@@ -144,19 +186,45 @@
         <p class="text-xs text-gray-500">Menge: ${item.quantity}</p>
       `;
       card.addEventListener("click", () => showItemDetails(item));
+
+      if (item.sellerId === userId) {
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors";
+        deleteButton.innerHTML = '&times;';
+        deleteButton.title = 'Anzeige löschen';
+        deleteButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteItem(item.id);
+        });
+        card.appendChild(deleteButton);
+      }
+
       itemsContainer.appendChild(card);
     };
 
-    async function showItemDetails(item) {
+    const renderHistoryItem = (transaction, type) => {
+      const card = document.createElement("div");
+      card.className = "bg-white rounded-xl shadow-md p-4 mb-4";
+      const timestamp = new Date(transaction.timestamp).toLocaleString();
+      card.innerHTML = `
+        <h4 class="text-lg font-bold">${transaction.itemName}</h4>
+        <p class="text-gray-600">Preis: ${transaction.price.toFixed(2)} €</p>
+        <p class="text-gray-600">Menge: ${transaction.quantity}</p>
+        <p class="text-gray-600">Datum: ${timestamp}</p>
+        ${type === 'bought' ? `<p class="text-gray-600">Gekauft von: ${transaction.sellerId}</p>` : `<p class="text-gray-600">Verkauft an: ${transaction.buyerId}</p>`}
+      `;
+      if (type === 'sold') {
+        soldItemsContainer.appendChild(card);
+      } else {
+        boughtItemsContainer.appendChild(card);
+      }
+    };
+
+    function showItemDetails(item) {
       const modal = document.createElement("div");
       modal.className = "fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50";
 
       const imagesHtml = item.imageUrls.map(url => `<img src="${url}" alt="${item.name}">`).join('');
-
-      let deleteButtonHtml = '';
-      if(item.sellerId === userId) {
-        deleteButtonHtml = `<button id="deleteItemBtn" class="mt-4 w-full px-4 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition">Angebot löschen</button>`;
-      }
 
       modal.innerHTML = `
         <div class="bg-white p-6 rounded-xl max-w-lg w-full relative">
@@ -168,7 +236,6 @@
           <p class="text-sm text-gray-500 mb-4">Verkäufer: ${item.sellerId}</p>
           <p class="text-sm text-gray-500 mb-6">Verfügbar: ${item.quantity} Stück</p>
           <button id="buyItemBtn" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Kaufen</button>
-          ${deleteButtonHtml}
         </div>
       `;
 
@@ -180,13 +247,6 @@
         await buyItem(item);
         modal.remove();
       });
-
-      if(item.sellerId === userId){
-        modal.querySelector("#deleteItemBtn").addEventListener("click", async () => {
-          await deleteDoc(doc(db, `artifacts/${appId}/public/data/products/${item.id}`));
-          modal.remove();
-        });
-      }
     }
 
     async function buyItem(item) {
@@ -203,11 +263,9 @@
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
         await updateDoc(itemRef, { quantity: item.quantity - 1 });
 
-        // Käufer Guthaben reduzieren
         const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
         await updateDoc(buyerDocRef, { balance: userBalance - item.price });
 
-        // Verkäufer Guthaben erhöhen
         const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
         const sellerSnap = await getDoc(sellerBalanceRef);
         if (sellerSnap.exists()) {
@@ -216,30 +274,35 @@
           await setDoc(sellerBalanceRef, { balance: item.price });
         }
 
-        // Kaufhistorie speichern
-        const purchaseHistoryRef = collection(db, `artifacts/${appId}/users/${userId}/purchases`);
-        await addDoc(purchaseHistoryRef, {
+        const transaction = {
           itemId: item.id,
-          name: item.name,
+          itemName: item.name,
           price: item.price,
+          quantity: 1,
           sellerId: item.sellerId,
-          timestamp: Date.now()
-        });
-
-        // Verkaufshistorie speichern
-        const sellerHistoryRef = collection(db, `artifacts/${appId}/users/${item.sellerId}/sales`);
-        await addDoc(sellerHistoryRef, {
-          itemId: item.id,
-          name: item.name,
-          price: item.price,
           buyerId: userId,
           timestamp: Date.now()
-        });
+        };
+        const historyCollectionRef = collection(db, `artifacts/${appId}/public/data/history`);
+        await addDoc(historyCollectionRef, transaction);
 
         alert("Kauf erfolgreich!");
       } catch (err) {
         console.error(err);
         alert("Fehler beim Kauf.");
+      }
+    }
+
+    async function deleteItem(itemId) {
+      if (confirm('Bist du sicher, dass du diese Anzeige löschen möchtest?')) {
+        try {
+          const itemRef = doc(db, `artifacts/${appId}/public/data/products/${itemId}`);
+          await deleteDoc(itemRef);
+          alert("Anzeige erfolgreich gelöscht.");
+        } catch (err) {
+          console.error(err);
+          alert("Fehler beim Löschen der Anzeige.");
+        }
       }
     }
 
@@ -272,32 +335,25 @@
       }
     });
 
-    const listenForHistory = async () => {
-      const purchasesRef = collection(db, `artifacts/${appId}/users/${userId}/purchases`);
-      const salesRef = collection(db, `artifacts/${appId}/users/${userId}/sales`);
+    showItemsBtn.addEventListener('click', () => {
+      itemsContainer.classList.remove('hidden');
+      addItemForm.classList.remove('hidden');
+      historyContainer.classList.add('hidden');
+      showItemsBtn.classList.replace('bg-gray-300', 'bg-blue-600');
+      showItemsBtn.classList.replace('text-gray-800', 'text-white');
+      showHistoryBtn.classList.replace('bg-blue-600', 'bg-gray-300');
+      showHistoryBtn.classList.replace('text-white', 'text-gray-800');
+    });
 
-      onSnapshot(purchasesRef, async (purchasesSnap) => {
-        const salesSnap = await getDocs(salesRef);
-        renderHistory(purchasesSnap.docs.map(d => d.data()), salesSnap.docs.map(d => d.data()));
-      });
-
-      onSnapshot(salesRef, async (salesSnap) => {
-        const purchasesSnap = await getDocs(purchasesRef);
-        renderHistory(purchasesSnap.docs.map(d => d.data()), salesSnap.docs.map(d => d.data()));
-      });
-    };
-
-    const renderHistory = (purchases, sales) => {
-      let html = '<h3 class="font-bold mb-2">Gekauft:</h3>';
-      if(purchases.length === 0) html += '<p class="mb-4 text-gray-500">Keine Käufe</p>';
-      else html += purchases.map(p => `<p>${p.name} - ${p.price.toFixed(2)} € von ${p.sellerId}</p>`).join('');
-
-      html += '<h3 class="font-bold mt-4 mb-2">Verkauft:</h3>';
-      if(sales.length === 0) html += '<p class="mb-4 text-gray-500">Keine Verkäufe</p>';
-      else html += sales.map(s => `<p>${s.name} - ${s.price.toFixed(2)} € an ${s.buyerId}</p>`).join('');
-
-      historyContainer.innerHTML = html;
-    };
+    showHistoryBtn.addEventListener('click', () => {
+      itemsContainer.classList.add('hidden');
+      addItemForm.classList.add('hidden');
+      historyContainer.classList.remove('hidden');
+      showHistoryBtn.classList.replace('bg-gray-300', 'bg-blue-600');
+      showHistoryBtn.classList.replace('text-gray-800', 'text-white');
+      showItemsBtn.classList.replace('bg-blue-600', 'bg-gray-300');
+      showItemsBtn.classList.replace('text-white', 'text-gray-800');
+    });
 
     authenticate();
   </script>
