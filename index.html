@@ -6,31 +6,12 @@
   <title>Mein Online-Marktplatz</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f3f4f6;
-    }
-    .container {
-      max-width: 1200px;
-    }
-    .clickable-card {
-      cursor: pointer;
-    }
-    .image-carousel {
-      display: flex;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      gap: 8px;
-    }
-    .image-carousel img {
-      flex: 0 0 auto;
-      width: 100%;
-      max-width: 100%;
-      height: 300px;
-      object-fit: cover;
-      border-radius: 8px;
-      scroll-snap-align: start;
-    }
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+    .container { max-width: 1200px; }
+    .clickable-card { cursor: pointer; }
+    .image-carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px; }
+    .image-carousel img { flex: 0 0 auto; width: 100%; max-width: 100%; height: 300px; object-fit: cover; border-radius: 8px; scroll-snap-align: start; }
+    .history-section { max-height: 300px; overflow-y: auto; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
@@ -57,16 +38,26 @@
     </form>
 
     <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
-    <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Artikel werden hier dynamisch eingefügt -->
+    <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+    <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Deine Historie</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-gray-50 p-4 rounded-lg shadow-inner history-section">
+        <h3 class="text-xl font-bold mb-2">Gekauft</h3>
+        <ul id="purchaseHistory" class="text-sm text-gray-700"></ul>
+      </div>
+      <div class="bg-gray-50 p-4 rounded-lg shadow-inner history-section">
+        <h3 class="text-xl font-bold mb-2">Verkauft</h3>
+        <ul id="salesHistory" class="text-sm text-gray-700"></ul>
+      </div>
     </div>
+
   </div>
 
-  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey:"AIzaSyCxq5QQU-H-gjbzaDqveRZOh6-dI452wuI",
@@ -78,7 +69,6 @@
     };
 
     const appId = "mein-marktplatz";
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
@@ -87,6 +77,8 @@
     const itemsContainer = document.getElementById("itemsContainer");
     const currentUserIdSpan = document.getElementById("currentUserId");
     const currentBalanceSpan = document.getElementById("currentBalance");
+    const purchaseHistoryList = document.getElementById("purchaseHistory");
+    const salesHistoryList = document.getElementById("salesHistory");
 
     let userId;
     let userBalance = 0;
@@ -98,6 +90,7 @@
         currentUserIdSpan.textContent = userId;
         listenForUserBalance();
         listenForItems();
+        listenForHistory();
       } catch (error) {
         alert("Fehler bei der Anmeldung: " + error.message);
       }
@@ -106,12 +99,8 @@
     const listenForUserBalance = () => {
       const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
       onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          userBalance = docSnap.data().balance;
-        } else {
-          userBalance = 1000;
-          setDoc(userDocRef, { balance: userBalance });
-        }
+        if (docSnap.exists()) userBalance = docSnap.data().balance;
+        else { userBalance = 1000; setDoc(userDocRef, { balance: userBalance }); }
         currentBalanceSpan.textContent = userBalance.toFixed(2);
       });
     };
@@ -120,10 +109,7 @@
       const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
       onSnapshot(itemsCollectionRef, (querySnapshot) => {
         itemsContainer.innerHTML = '';
-        querySnapshot.forEach((docSnap) => {
-          const item = { id: docSnap.id, ...docSnap.data() };
-          renderItem(item);
-        });
+        querySnapshot.forEach(docSnap => renderItem({ id: docSnap.id, ...docSnap.data() }));
       });
     };
 
@@ -145,9 +131,12 @@
     function showItemDetails(item) {
       const modal = document.createElement("div");
       modal.className = "fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50";
-
-      // Alle Bilder als scrollbare Galerie
       const imagesHtml = item.imageUrls.map(url => `<img src="${url}" alt="${item.name}">`).join('');
+
+      let deleteButtonHtml = '';
+      if (item.sellerId === userId) {
+        deleteButtonHtml = `<button id="deleteItemBtn" class="w-full mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Anzeige löschen</button>`;
+      }
 
       modal.innerHTML = `
         <div class="bg-white p-6 rounded-xl max-w-lg w-full relative">
@@ -159,51 +148,73 @@
           <p class="text-sm text-gray-500 mb-4">Verkäufer: ${item.sellerId}</p>
           <p class="text-sm text-gray-500 mb-6">Verfügbar: ${item.quantity} Stück</p>
           <button id="buyItemBtn" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Kaufen</button>
+          ${deleteButtonHtml}
         </div>
       `;
-
       document.body.appendChild(modal);
 
       modal.querySelector("#closeModal").addEventListener("click", () => modal.remove());
-
-      modal.querySelector("#buyItemBtn").addEventListener("click", async () => {
-        await buyItem(item);
-        modal.remove();
-      });
+      modal.querySelector("#buyItemBtn").addEventListener("click", async () => { await buyItem(item); modal.remove(); });
+      if (item.sellerId === userId) {
+        modal.querySelector("#deleteItemBtn").addEventListener("click", async () => {
+          if (confirm("Möchtest du diese Anzeige wirklich löschen?")) {
+            await deleteDoc(doc(db, `artifacts/${appId}/public/data/products/${item.id}`));
+            alert("Anzeige gelöscht!");
+            modal.remove();
+          }
+        });
+      }
     }
 
     async function buyItem(item) {
-      if (item.price > userBalance) {
-        alert("Nicht genug Guthaben!");
-        return;
-      }
-      if (item.quantity <= 0) {
-        alert("Artikel nicht mehr verfügbar!");
-        return;
-      }
+      if (item.price > userBalance) { alert("Nicht genug Guthaben!"); return; }
+      if (item.quantity <= 0) { alert("Artikel nicht mehr verfügbar!"); return; }
 
       try {
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
         await updateDoc(itemRef, { quantity: item.quantity - 1 });
 
-        // Käufer Guthaben reduzieren
         const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
         await updateDoc(buyerDocRef, { balance: userBalance - item.price });
 
-        // Verkäufer Guthaben erhöhen
         const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
         const sellerSnap = await getDoc(sellerBalanceRef);
-        if (sellerSnap.exists()) {
-          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
-        } else {
-          await setDoc(sellerBalanceRef, { balance: item.price });
-        }
+        if (sellerSnap.exists()) await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
+        else await setDoc(sellerBalanceRef, { balance: item.price });
+
+        // Historie speichern
+        const purchaseRef = collection(db, `artifacts/${appId}/users/${userId}/history/purchases`);
+        const saleRef = collection(db, `artifacts/${appId}/users/${item.sellerId}/history/sales`);
+        await addDoc(purchaseRef, { productId: item.id, name: item.name, price: item.price, sellerId: item.sellerId, timestamp: Date.now() });
+        await addDoc(saleRef, { productId: item.id, name: item.name, price: item.price, buyerId: userId, timestamp: Date.now() });
 
         alert("Kauf erfolgreich!");
-      } catch (err) {
-        console.error(err);
-        alert("Fehler beim Kauf.");
-      }
+      } catch (err) { console.error(err); alert("Fehler beim Kauf."); }
+    }
+
+    function listenForHistory() {
+      const purchaseRef = collection(db, `artifacts/${appId}/users/${userId}/history/purchases`);
+      const saleRef = collection(db, `artifacts/${appId}/users/${userId}/history/sales`);
+
+      onSnapshot(query(purchaseRef, orderBy("timestamp", "desc")), snapshot => {
+        purchaseHistoryList.innerHTML = '';
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const li = document.createElement("li");
+          li.textContent = `${data.name} - ${data.price.toFixed(2)} € (Verkäufer: ${data.sellerId})`;
+          purchaseHistoryList.appendChild(li);
+        });
+      });
+
+      onSnapshot(query(saleRef, orderBy("timestamp", "desc")), snapshot => {
+        salesHistoryList.innerHTML = '';
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const li = document.createElement("li");
+          li.textContent = `${data.name} - ${data.price.toFixed(2)} € (Käufer: ${data.buyerId})`;
+          salesHistoryList.appendChild(li);
+        });
+      });
     }
 
     addItemForm.addEventListener("submit", async (e) => {
@@ -214,25 +225,13 @@
       const imageUrls = document.getElementById("itemImages").value.split(",").map(url => url.trim());
       const description = document.getElementById("itemDescription").value;
 
-      const item = {
-        name,
-        price,
-        quantity,
-        imageUrls,
-        description,
-        sellerId: userId,
-        timestamp: Date.now()
-      };
+      const item = { name, price, quantity, imageUrls, description, sellerId: userId, timestamp: Date.now() };
 
       try {
-        const itemsCollectionRef = collection(db, `artifacts/${appId}/public/data/products`);
-        await addDoc(itemsCollectionRef, item);
+        await addDoc(collection(db, `artifacts/${appId}/public/data/products`), item);
         addItemForm.reset();
         alert("Artikel erfolgreich gepostet!");
-      } catch (err) {
-        console.error(err);
-        alert("Fehler beim Posten des Artikels.");
-      }
+      } catch (err) { console.error(err); alert("Fehler beim Posten des Artikels."); }
     });
 
     authenticate();
