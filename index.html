@@ -43,10 +43,11 @@
     <p class="text-center text-gray-500 mb-6 md:text-lg">Biete Artikel an und finde tolle Angebote!</p>
 
     <div id="userInfo" class="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-600 mb-6 p-2 bg-gray-200 rounded-lg">
-      <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
-      <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> €</p>
-      <p id="adminStatus" class="text-red-600 font-bold hidden">[ADMIN-MODUS]</p>
-    </div>
+  <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
+  <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> €</p>
+  <button id="openSettingsBtn" class="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 font-bold text-xs">Profil bearbeiten</button>
+  <p id="adminStatus" class="text-red-600 font-bold hidden">[ADMIN-MODUS]</p>
+</div>
 
     <!-- Admin-Guthabenkontrolle -->
     <div id="adminBalanceControl" class="hidden mt-4 p-4 bg-yellow-50 rounded-lg shadow-inner">
@@ -74,6 +75,15 @@
     <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <!-- Artikel werden hier dynamisch eingefügt -->
     </div>
+
+    <div id="userSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50 hidden">
+  <div class="bg-white p-6 rounded-xl max-w-md w-full relative">
+    <button id="closeSettingsModal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold">&times;</button>
+    <h3 class="text-lg font-bold text-gray-700 mb-2">Mein Profil</h3>
+    <input type="text" id="userNameInput" placeholder="Dein Name" class="w-full p-2 mb-2 rounded border border-gray-300">
+    <button id="saveUserNameBtn" class="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-bold">Name speichern</button>
+  </div>
+</div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -105,7 +115,20 @@
     const adminBalanceControl = document.getElementById("adminBalanceControl");
     const updateBalanceBtn = document.getElementById("updateBalanceBtn");
     const myTransactionsBtn = document.getElementById("myTransactionsBtn");
+const openSettingsBtn = document.getElementById("openSettingsBtn");
+const userSettingsModal = document.getElementById("userSettingsModal");
+const closeSettingsModal = document.getElementById("closeSettingsModal");
+const userNameInput = document.getElementById("userNameInput");
+const saveUserNameBtn = document.getElementById("saveUserNameBtn");
 
+    openSettingsBtn.addEventListener("click", () => {
+  userSettingsModal.classList.remove("hidden");
+});
+
+closeSettingsModal.addEventListener("click", () => {
+  userSettingsModal.classList.add("hidden");
+});
+    
     let userId;
     let userBalance = 0;
     let isAdmin = false;
@@ -137,6 +160,34 @@
       }
     }
 
+    const userProfileRef = doc(db, `artifacts/${appId}/users/${userId}/profile`);
+
+// Name laden, falls schon gespeichert
+const loadUserName = async () => {
+  const docSnap = await getDoc(userProfileRef);
+  if (docSnap.exists() && docSnap.data().name) {
+    userNameInput.value = docSnap.data().name;
+  }
+};
+loadUserName();
+
+// Name speichern
+saveUserNameBtn.addEventListener("click", async () => {
+  const name = userNameInput.value.trim();
+  if (!name) {
+    showMessage("Bitte einen gültigen Namen eingeben!", "error");
+    return;
+  }
+  try {
+    await setDoc(userProfileRef, { name }, { merge: true });
+    showMessage("Name erfolgreich gespeichert!", "success");
+    userSettingsModal.classList.add("hidden");
+  } catch (err) {
+    console.error(err);
+    showMessage("Fehler beim Speichern des Namens.", "error");
+  }
+});
+    
     const listenForUserBalance = () => {
       const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
       onSnapshot(userDocRef, (docSnap) => {
@@ -416,14 +467,26 @@
 
     transactionsContent.innerHTML = "";
 
+    // Hilfsfunktion, um Name zu bekommen oder fallback auf UID
+    const getUserName = async (uid) => {
+      const userDoc = await getDoc(doc(db, `artifacts/${appId}/users/${uid}/profile`));
+      if (userDoc.exists() && userDoc.data().name) {
+        return userDoc.data().name;
+      }
+      return uid;
+    };
+
     for (const docSnap of snapshot.docs) {
       const item = { id: docSnap.id, ...docSnap.data() };
       const transCol = collection(db, `artifacts/${appId}/public/data/products/${item.id}/transactions`);
       const transSnapshot = await getDocs(transCol);
 
-      // Verkäufe
-      transSnapshot.forEach(t => {
+      for (const t of transSnapshot.docs) {
         const trans = t.data();
+        const sellerName = await getUserName(item.sellerId);
+        const buyerName = await getUserName(trans.buyerId);
+
+        // Verkäufe des aktuellen Nutzers
         if (item.sellerId === userId) {
           const soldCard = document.createElement("div");
           soldCard.className = "p-3 border rounded bg-green-50 flex gap-4";
@@ -432,7 +495,7 @@
             <div>
               <strong>Verkauft:</strong> ${item.name} <br>
               Preis: ${trans.price.toFixed(2)} € <br>
-              An: ${trans.buyerId} <br>
+              An: ${buyerName} <br>
               Menge: ${trans.quantity} <br>
               Datum: ${new Date(trans.soldAt).toLocaleString()}
             </div>
@@ -440,7 +503,7 @@
           transactionsContent.appendChild(soldCard);
         }
 
-        // Käufe
+        // Käufe des aktuellen Nutzers
         if (trans.buyerId === userId) {
           const boughtCard = document.createElement("div");
           boughtCard.className = "p-3 border rounded bg-blue-50 flex gap-4";
@@ -449,14 +512,14 @@
             <div>
               <strong>Gekauft:</strong> ${item.name} <br>
               Preis: ${trans.price.toFixed(2)} € <br>
-              Von: ${item.sellerId} <br>
+              Von: ${sellerName} <br>
               Menge: ${trans.quantity} <br>
               Datum: ${new Date(trans.soldAt).toLocaleString()}
             </div>
           `;
           transactionsContent.appendChild(boughtCard);
         }
-      });
+      }
     }
 
     if (transactionsContent.innerHTML === "") {
