@@ -52,7 +52,7 @@
     <div id="adminBalanceControl" class="hidden mt-4 p-4 bg-yellow-50 rounded-lg shadow-inner">
       <h3 class="text-lg font-bold mb-2 text-gray-700">Guthaben eines Nutzers ändern</h3>
       <input type="text" id="targetUserId" placeholder="Nutzer-ID" class="w-full p-2 mb-2 rounded border border-gray-300">
-      <input type="number" id="newBalance" placeholder="Neues Guthaben (€)" step="0.01" class="w-full p-2 mb-2 rounded border border-gray-300">
+      <input type="number" id="newBalance" placeholder="Neues Guthaben (J€)" step="0.01" class="w-full p-2 mb-2 rounded border border-gray-300">
       <button id="updateBalanceBtn" class="w-full p-2 bg-green-500 text-white font-bold rounded hover:bg-green-600">Guthaben ändern</button>
     </div>
 
@@ -62,7 +62,7 @@
       <h2 class="text-2xl font-bold text-gray-700 mb-4">Artikel anbieten</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="text" id="itemName" placeholder="Artikelbezeichnung" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-        <input type="number" id="itemPrice" placeholder="Preis in € (z.B. 9.99)" step="0.01" min="0" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+        <input type="number" id="itemPrice" placeholder="Preis in J€ (z.B. 9.99)" step="0.01" min="0" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
       </div>
       <input type="number" id="itemQuantity" placeholder="Menge" min="0" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
       <textarea id="itemImages" placeholder="Bild-URLs (durch Komma getrennt)" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
@@ -167,7 +167,7 @@
       card.innerHTML = `
         <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-full h-48 object-cover rounded-md mb-4">
         <h3 class="text-xl font-bold text-gray-800">${item.name}</h3>
-        <p class="text-green-600 text-lg font-semibold">${item.price.toFixed(2)} €</p>
+        <p class="text-green-600 text-lg font-semibold">${item.price.toFixed(2)} J€</p>
         <p class="text-sm text-gray-600 mb-2 truncate">${item.description}</p>
         <p class="text-xs text-gray-400">Verkäufer: ${item.sellerId}</p>
         <p class="text-xs text-gray-500">Menge: ${item.quantity}</p>
@@ -213,7 +213,7 @@
           <button id="closeModal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold">&times;</button>
           <div class="image-carousel mb-4">${imagesHtml}</div>
           <h2 class="text-2xl font-bold mb-2">${item.name}</h2>
-          <p class="text-green-600 text-lg font-semibold mb-2">${item.price.toFixed(2)} €</p>
+          <p class="text-green-600 text-lg font-semibold mb-2">${item.price.toFixed(2)} J€</p>
           <p class="mb-4">${item.description}</p>
           <p class="text-sm text-gray-500 mb-4">Verkäufer: ${item.sellerId}</p>
           <p class="text-sm text-gray-500 mb-6">Verfügbar: ${item.quantity} Stück</p>
@@ -385,7 +385,7 @@
       try {
         const targetRef = doc(db, `artifacts/${appId}/users/${targetId}/profile/balance`);
         await setDoc(targetRef, { balance: newBal }, { merge: true });
-        showMessage(`Guthaben von Nutzer ${targetId} auf ${newBal.toFixed(2)} € gesetzt!`, "success");
+        showMessage(`Guthaben von Nutzer ${targetId} auf ${newBal.toFixed(2)} J€ gesetzt!`, "success");
       } catch (err) {
         console.error(err);
         showMessage("Fehler beim Ändern des Guthabens.", "error");
@@ -431,7 +431,7 @@
             <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
             <div>
               <strong>Verkauft:</strong> ${item.name} <br>
-              Preis: ${trans.price.toFixed(2)} € <br>
+              Preis: ${trans.price.toFixed(2)} J€ <br>
               An: ${trans.buyerId} <br>
               Menge: ${trans.quantity} <br>
               Datum: ${new Date(trans.soldAt).toLocaleString()}
