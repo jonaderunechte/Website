@@ -191,7 +191,7 @@
             { id: 'sell-10-items', type: 'sellItem', required: 10, reward: 400, name: 'Zehn Verkäufe', description: 'Verkaufe 10 Artikel.' },
             
             // Typ: Guthaben-Meilensteine
-            { id: 'balance-2000', type: 'balanceMilestone', required: 2000, reward: 100, name: '2.000 J€', description: 'Erreiche ein Guthaben von 2.000 J€.' },
+            { id: 'balance-1000', type: 'balanceMilestone', required: 1000, reward: 100, name: '1.000 J€', description: 'Erreiche ein Guthaben von 1.000 J€.' },
             { id: 'balance-5000', type: 'balanceMilestone', required: 5000, reward: 500, name: '5.000 J€', description: 'Erreiche ein Guthaben von 5.000 J€.' },
             { id: 'balance-10000', type: 'balanceMilestone', required: 10000, reward: 1000, name: '10.000 J€', description: 'Erreiche ein Guthaben von 10.000 J€.' },
             
@@ -270,8 +270,6 @@
                 setDoc(userDocRef, { balance: userBalance });
             }
             currentBalanceSpan.textContent = userBalance.toFixed(2);
-            // Überprüfen, ob Guthaben-Aufgaben abgeschlossen wurden
-            checkBalanceAchievements(userBalance);
         });
     };
 
@@ -289,92 +287,89 @@
     const listenForAchievements = () => {
         const userAchievementsRef = doc(db, `artifacts/${appId}/users/${userId}/profile/achievements`);
         onSnapshot(userAchievementsRef, (docSnap) => {
-            if (docSnap.exists()) {
-                userAchievements = docSnap.data();
-            } else {
-                userAchievements = {};
-                setDoc(userAchievementsRef, userAchievements);
-            }
+            userAchievements = docSnap.exists() ? docSnap.data() : {};
             renderAchievements();
+            checkAndRewardAchievements();
         });
     };
 
-    const updateAchievementProgress = async (type, increment = 1, value = 0) => {
-        const userAchievementsRef = doc(db, `artifacts/${appId}/users/${userId}/profile/achievements`);
+    const updateAchievementProgress = async (type, increment = 1, value = 0, targetUserId = userId) => {
+        const userAchievementsRef = doc(db, `artifacts/${appId}/users/${targetUserId}/profile/achievements`);
+        let achievementsToUpdate = {};
         
-        let newAchievements = { ...userAchievements };
-        if (!newAchievements[type]) {
-            newAchievements[type] = { count: 0, completed: [] };
+        const docSnap = await getDoc(userAchievementsRef);
+        achievementsToUpdate = docSnap.exists() ? docSnap.data() : {};
+        
+        if (!achievementsToUpdate[type]) {
+            achievementsToUpdate[type] = { count: 0, completed: [] };
         }
         
         if (type === 'postItem' || type === 'buyItem' || type === 'sellItem' || type === 'completeTransaction' || type === 'editItem' || type === 'deleteItem') {
-          newAchievements[type].count = (newAchievements[type].count || 0) + increment;
+          achievementsToUpdate[type].count = (achievementsToUpdate[type].count || 0) + increment;
         } else if (type === 'postImages') {
-            newAchievements[type].imagesPosted = (newAchievements[type].imagesPosted || []).concat(value);
+            if (!achievementsToUpdate[type].imagesPosted) achievementsToUpdate[type].imagesPosted = [];
+            achievementsToUpdate[type].imagesPosted.push(value);
         } else if (type === 'postPrice') {
-            newAchievements[type].pricesPosted = (newAchievements[type].pricesPosted || []).concat(value);
+            if (!achievementsToUpdate[type].pricesPosted) achievementsToUpdate[type].pricesPosted = [];
+            achievementsToUpdate[type].pricesPosted.push(value);
         } else if (type === 'postQuantity') {
-            newAchievements[type].quantitiesPosted = (newAchievements[type].quantitiesPosted || []).concat(value);
+            if (!achievementsToUpdate[type].quantitiesPosted) achievementsToUpdate[type].quantitiesPosted = [];
+            achievementsToUpdate[type].quantitiesPosted.push(value);
         } else if (type === 'buyValue') {
-            newAchievements[type].valuesBought = (newAchievements[type].valuesBought || []).concat(value);
+            if (!achievementsToUpdate[type].valuesBought) achievementsToUpdate[type].valuesBought = [];
+            achievementsToUpdate[type].valuesBought.push(value);
         } else if (type === 'buyBulk') {
-            newAchievements[type].bulkBuys = (newAchievements[type].bulkBuys || []).concat(value);
+            if (!achievementsToUpdate[type].bulkBuys) achievementsToUpdate[type].bulkBuys = [];
+            achievementsToUpdate[type].bulkBuys.push(value);
         } else if (type === 'sellValue') {
-            newAchievements[type].valuesSold = (newAchievements[type].valuesSold || []).concat(value);
+            if (!achievementsToUpdate[type].valuesSold) achievementsToUpdate[type].valuesSold = [];
+            achievementsToUpdate[type].valuesSold.push(value);
         }
 
-        await setDoc(userAchievementsRef, newAchievements);
-        checkAndRewardAchievements();
+        await setDoc(userAchievementsRef, achievementsToUpdate);
     };
 
     const checkAndRewardAchievements = async () => {
         const userAchievementsRef = doc(db, `artifacts/${appId}/users/${userId}/profile/achievements`);
         const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-        let changesMade = false;
+        let achievementsChanged = false;
+
+        const docSnap = await getDoc(userAchievementsRef);
+        const achievementsData = docSnap.exists() ? docSnap.data() : {};
+
+        const balanceDocSnap = await getDoc(userDocRef);
+        const currentBalance = balanceDocSnap.exists() ? balanceDocSnap.data().balance : 0;
         
         for (const achievement of achievementDefinitions) {
-            if (userAchievements[achievement.type] && !userAchievements[achievement.type].completed.includes(achievement.id)) {
+            const progressInfo = achievementsData[achievement.type] || { count: 0, completed: [] };
+            
+            if (!progressInfo.completed.includes(achievement.id)) {
                 let isCompleted = false;
-                const progress = userAchievements[achievement.type].count || 0;
                 
-                if (achievement.type === 'postImages' || achievement.type === 'postPrice' || achievement.type === 'postQuantity' || achievement.type === 'buyValue' || achievement.type === 'buyBulk' || achievement.type === 'sellValue') {
-                    // Check logic for specific value-based achievements
-                    const values = userAchievements[achievement.type].imagesPosted || userAchievements[achievement.type].pricesPosted || userAchievements[achievement.type].quantitiesPosted || userAchievements[achievement.type].valuesBought || userAchievements[achievement.type].bulkBuys || userAchievements[achievement.type].valuesSold || [];
+                if (achievement.type === 'balanceMilestone') {
+                    isCompleted = currentBalance >= achievement.required;
+                } else if (achievement.type === 'postImages' || achievement.type === 'postPrice' || achievement.type === 'postQuantity' || achievement.type === 'buyValue' || achievement.type === 'buyBulk' || achievement.type === 'sellValue') {
+                    const values = progressInfo.imagesPosted || progressInfo.pricesPosted || progressInfo.quantitiesPosted || progressInfo.valuesBought || progressInfo.bulkBuys || progressInfo.valuesSold || [];
                     isCompleted = values.some(val => val >= achievement.required);
-                } else if (achievement.type === 'balanceMilestone') {
-                    if (userBalance >= achievement.required) {
-                        isCompleted = true;
-                    }
                 } else {
-                    isCompleted = progress >= achievement.required;
+                    isCompleted = progressInfo.count >= achievement.required;
                 }
 
                 if (isCompleted) {
-                    if (!userAchievements[achievement.type].completed.includes(achievement.id)) {
-                        userAchievements[achievement.type].completed.push(achievement.id);
-                        await updateDoc(userDocRef, { balance: userBalance + achievement.reward });
-                        showMessage(`Aufgabe "${achievement.name}" abgeschlossen! Belohnung: ${achievement.reward} J€`, 'success');
-                        changesMade = true;
-                    }
+                    progressInfo.completed.push(achievement.id);
+                    achievementsData[achievement.type] = progressInfo;
+                    await updateDoc(userDocRef, { balance: currentBalance + achievement.reward });
+                    showMessage(`Aufgabe "${achievement.name}" abgeschlossen! Belohnung: ${achievement.reward} J€`, 'success');
+                    achievementsChanged = true;
                 }
             }
         }
         
-        if (changesMade) {
-            await setDoc(userAchievementsRef, userAchievements);
+        if (achievementsChanged) {
+            await setDoc(userAchievementsRef, achievementsData);
         }
     };
     
-    const checkBalanceAchievements = (currentBalance) => {
-        // Diese Funktion wird in listenForUserBalance aufgerufen
-        achievementDefinitions.filter(a => a.type === 'balanceMilestone').forEach(achievement => {
-            const isCompleted = userAchievements.balanceMilestone && userAchievements.balanceMilestone.completed.includes(achievement.id);
-            if (!isCompleted && currentBalance >= achievement.required) {
-                updateAchievementProgress('balanceMilestone', 0, currentBalance);
-            }
-        });
-    };
-
     const renderAchievements = () => {
         achievementsContainer.innerHTML = '';
         achievementDefinitions.forEach(achievement => {
@@ -384,22 +379,22 @@
 
             if (achievement.type === 'postImages') {
                 const values = progressInfo.imagesPosted || [];
-                currentProgress = values.filter(val => val >= achievement.required).length;
+                currentProgress = values.filter(val => val >= achievement.required).length > 0 ? 1 : 0;
             } else if (achievement.type === 'postPrice') {
                 const values = progressInfo.pricesPosted || [];
-                currentProgress = values.filter(val => val >= achievement.required).length;
+                currentProgress = values.filter(val => val >= achievement.required).length > 0 ? 1 : 0;
             } else if (achievement.type === 'postQuantity') {
                 const values = progressInfo.quantitiesPosted || [];
-                currentProgress = values.filter(val => val >= achievement.required).length;
+                currentProgress = values.filter(val => val >= achievement.required).length > 0 ? 1 : 0;
             } else if (achievement.type === 'buyValue') {
                 const values = progressInfo.valuesBought || [];
-                currentProgress = values.filter(val => val >= achievement.required).length;
+                currentProgress = values.filter(val => val >= achievement.required).length > 0 ? 1 : 0;
             } else if (achievement.type === 'buyBulk') {
                 const values = progressInfo.bulkBuys || [];
-                currentProgress = values.filter(val => val >= achievement.required).length;
+                currentProgress = values.filter(val => val >= achievement.required).length > 0 ? 1 : 0;
             } else if (achievement.type === 'sellValue') {
                 const values = progressInfo.valuesSold || [];
-                currentProgress = values.filter(val => val >= achievement.required).length;
+                currentProgress = values.filter(val => val >= achievement.required).length > 0 ? 1 : 0;
             }
             
             if (achievement.type === 'balanceMilestone') {
@@ -608,10 +603,10 @@
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
 
         await updateDoc(itemRef, { quantity: item.quantity - 1 });
-        await updateAchievementProgress('buyItem', 1); // Update achievement for buying
-        await updateAchievementProgress('completeTransaction', 1); // Update achievement for transactions
-        await updateAchievementProgress('buyValue', 0, item.price); // Update buy value achievement
-        await updateAchievementProgress('buyBulk', 0, 1); // Update buy bulk achievement
+        await updateAchievementProgress('buyItem', 1);
+        await updateAchievementProgress('completeTransaction', 1);
+        await updateAchievementProgress('buyValue', 0, item.price);
+        await updateAchievementProgress('buyBulk', 0, 1);
 
         const transaction = {
           buyerId: userId,
@@ -632,31 +627,11 @@
           await setDoc(sellerBalanceRef, { balance: item.price });
         }
         
-        // Only update 'sellItem' achievement for the seller
+        // Update achievements for the seller
         if (item.sellerId !== userId) {
-          const sellerAchievementsRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/achievements`);
-          let sellerAchievements = {};
-          const sellerAchievementsSnap = await getDoc(sellerAchievementsRef);
-          if (sellerAchievementsSnap.exists()) {
-            sellerAchievements = sellerAchievementsSnap.data();
-          }
-          if (!sellerAchievements.sellItem) {
-            sellerAchievements.sellItem = { count: 0, completed: [] };
-          }
-          sellerAchievements.sellItem.count = (sellerAchievements.sellItem.count || 0) + 1;
-          
-          if (!sellerAchievements.completeTransaction) {
-            sellerAchievements.completeTransaction = { count: 0, completed: [] };
-          }
-          sellerAchievements.completeTransaction.count = (sellerAchievements.completeTransaction.count || 0) + 1;
-
-          if (!sellerAchievements.sellValue) {
-            sellerAchievements.sellValue = { valuesSold: [], completed: [] };
-          }
-          sellerAchievements.sellValue.valuesSold.push(item.price);
-
-          await setDoc(sellerAchievementsRef, sellerAchievements);
-          // TODO: Add logic to check and reward seller's achievements here
+          await updateAchievementProgress('sellItem', 1, 0, item.sellerId);
+          await updateAchievementProgress('completeTransaction', 1, 0, item.sellerId);
+          await updateAchievementProgress('sellValue', 0, item.price, item.sellerId);
         }
 
         showMessage("Kauf erfolgreich!", 'success');
@@ -708,10 +683,12 @@
 
       try {
         await addDoc(collection(db, `artifacts/${appId}/public/data/products`), item);
-        await updateAchievementProgress('postItem', 1); // Update post item achievement
-        await updateAchievementProgress('postImages', 0, imageUrls.length); // Update image achievement
-        await updateAchievementProgress('postPrice', 0, price); // Update price achievement
-        await updateAchievementProgress('postQuantity', 0, quantity); // Update quantity achievement
+        await updateAchievementProgress('postItem', 1);
+        await updateAchievementProgress('postImages', 0, imageUrls.length);
+        await updateAchievementProgress('postPrice', 0, price);
+        await updateAchievementProgress('postQuantity', 0, quantity);
+        await updateAchievementProgress('completeTransaction', 1);
+
 
         addItemForm.reset();
         showMessage("Artikel erfolgreich hinzugefügt!", 'success');
