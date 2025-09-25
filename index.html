@@ -42,37 +42,74 @@
     <h1 class="text-4xl md:text-5xl font-extrabold text-center text-gray-800 mb-2">Mein Online-Marktplatz</h1>
     <p class="text-center text-gray-500 mb-6 md:text-lg">Biete Artikel an und finde tolle Angebote!</p>
 
-    <div id="userInfo" class="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-600 mb-6 p-2 bg-gray-200 rounded-lg">
-      <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
-      <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> J€</p>
-      <p id="adminStatus" class="text-red-600 font-bold hidden">[ADMIN-MODUS]</p>
+    <!-- Tabs -->
+    <div class="flex justify-center mb-6">
+      <button id="tabMarketplace" class="px-6 py-2 rounded-l-lg font-bold transition-colors bg-blue-600 text-white hover:bg-blue-700">Marktplatz</button>
+      <button id="tabAchievements" class="px-6 py-2 rounded-r-lg font-bold transition-colors bg-gray-200 text-gray-800 hover:bg-gray-300">Aufgaben</button>
     </div>
 
-    <!-- Admin-Guthabenkontrolle -->
-    <div id="adminBalanceControl" class="hidden mt-4 p-4 bg-yellow-50 rounded-lg shadow-inner">
-      <h3 class="text-lg font-bold mb-2 text-gray-700">Guthaben eines Nutzers ändern</h3>
-      <input type="text" id="targetUserId" placeholder="Nutzer-ID" class="w-full p-2 mb-2 rounded border border-gray-300">
-      <input type="number" id="newBalance" placeholder="Neues Guthaben (J€)" step="0.01" class="w-full p-2 mb-2 rounded border border-gray-300">
-      <button id="updateBalanceBtn" class="w-full p-2 bg-green-500 text-white font-bold rounded hover:bg-green-600">Guthaben ändern</button>
+    <!-- Marktplatz-Ansicht -->
+    <div id="viewMarketplace">
+        <div id="userInfo" class="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-600 mb-6 p-2 bg-gray-200 rounded-lg">
+          <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
+          <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> J€</p>
+          <p id="adminStatus" class="text-red-600 font-bold hidden">[ADMIN-MODUS]</p>
+        </div>
+
+        <!-- Admin-Guthabenkontrolle -->
+        <div id="adminBalanceControl" class="hidden mt-4 p-4 bg-yellow-50 rounded-lg shadow-inner">
+          <h3 class="text-lg font-bold mb-2 text-gray-700">Guthaben eines Nutzers ändern</h3>
+          <input type="text" id="targetUserId" placeholder="Nutzer-ID" class="w-full p-2 mb-2 rounded border border-gray-300">
+          <input type="number" id="newBalance" placeholder="Neues Guthaben (J€)" step="0.01" class="w-full p-2 mb-2 rounded border border-gray-300">
+          <button id="updateBalanceBtn" class="w-full p-2 bg-green-500 text-white font-bold rounded hover:bg-green-600">Guthaben ändern</button>
+        </div>
+
+        <button id="myTransactionsBtn" class="mt-4 p-2 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 transition">Meine Transaktionen</button>
+
+        <form id="addItemForm" class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
+          <h2 class="text-2xl font-bold text-gray-700 mb-4">Artikel anbieten</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="text" id="itemName" placeholder="Artikelbezeichnung" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+            <input type="number" id="itemPrice" placeholder="Preis in J€ (z.B. 9.99)" step="0.01" min="0" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+          </div>
+          <input type="number" id="itemQuantity" placeholder="Menge" min="0" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+          <textarea id="itemImages" placeholder="Bild-URLs (durch Komma getrennt)" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
+          <textarea id="itemDescription" placeholder="Artikelbeschreibung" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
+          <button type="submit" class="w-full mt-6 p-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">Artikel posten</button>
+        </form>
+
+        <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
+        <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Artikel werden hier dynamisch eingefügt -->
+        </div>
     </div>
 
-    <button id="myTransactionsBtn" class="mt-4 p-2 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 transition">Meine Transaktionen</button>
-
-    <form id="addItemForm" class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
-      <h2 class="text-2xl font-bold text-gray-700 mb-4">Artikel anbieten</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input type="text" id="itemName" placeholder="Artikelbezeichnung" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-        <input type="number" id="itemPrice" placeholder="Preis in J€ (z.B. 9.99)" step="0.01" min="0" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+    <!-- Aufgaben-Ansicht -->
+    <div id="viewAchievements" class="hidden">
+      <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aufgaben und Belohnungen</h2>
+      <div id="achievementsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Aufgaben werden hier dynamisch eingefügt -->
       </div>
-      <input type="number" id="itemQuantity" placeholder="Menge" min="0" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-      <textarea id="itemImages" placeholder="Bild-URLs (durch Komma getrennt)" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
-      <textarea id="itemDescription" placeholder="Artikelbeschreibung" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
-      <button type="submit" class="w-full mt-6 p-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">Artikel posten</button>
-    </form>
+    </div>
+  </div>
 
-    <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
-    <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Artikel werden hier dynamisch eingefügt -->
+  <!-- Modal-Fenster für die Bearbeitung -->
+  <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50 hidden">
+    <div class="bg-white p-6 rounded-xl max-w-lg w-full relative max-h-[90vh] overflow-y-auto">
+      <button id="closeEditModal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold">&times;</button>
+      <h2 class="text-2xl font-bold mb-4">Artikel bearbeiten</h2>
+      <input type="hidden" id="editItemId">
+      <label for="editItemName" class="block text-gray-700 font-bold mb-2">Artikelbezeichnung:</label>
+      <input type="text" id="editItemName" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+      <label for="editItemPrice" class="block text-gray-700 font-bold mb-2">Preis in J€:</label>
+      <input type="number" id="editItemPrice" step="0.01" min="0" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+      <label for="editItemQuantity" class="block text-gray-700 font-bold mb-2">Menge:</label>
+      <input type="number" id="editItemQuantity" min="0" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+      <label for="editItemImages" class="block text-gray-700 font-bold mb-2">Bild-URLs (durch Komma getrennt):</label>
+      <textarea id="editItemImages" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
+      <label for="editItemDescription" class="block text-gray-700 font-bold mb-2">Artikelbeschreibung:</label>
+      <textarea id="editItemDescription" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
+      <button id="saveEditBtn" class="w-full mt-4 p-4 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-md">Änderungen speichern</button>
     </div>
   </div>
 
@@ -105,11 +142,95 @@
     const adminBalanceControl = document.getElementById("adminBalanceControl");
     const updateBalanceBtn = document.getElementById("updateBalanceBtn");
     const myTransactionsBtn = document.getElementById("myTransactionsBtn");
+    const tabMarketplace = document.getElementById("tabMarketplace");
+    const tabAchievements = document.getElementById("tabAchievements");
+    const viewMarketplace = document.getElementById("viewMarketplace");
+    const viewAchievements = document.getElementById("viewAchievements");
+    const achievementsContainer = document.getElementById("achievementsContainer");
+    
+    // Bearbeitungs-Modal-Elemente
+    const editModal = document.getElementById("editModal");
+    const closeEditModalBtn = document.getElementById("closeEditModal");
+    const editItemIdInput = document.getElementById("editItemId");
+    const editItemNameInput = document.getElementById("editItemName");
+    const editItemPriceInput = document.getElementById("editItemPrice");
+    const editItemQuantityInput = document.getElementById("editItemQuantity");
+    const editItemImagesInput = document.getElementById("editItemImages");
+    const editItemDescriptionInput = document.getElementById("editItemDescription");
+    const saveEditBtn = document.getElementById("saveEditBtn");
 
     let userId;
     let userBalance = 0;
     let isAdmin = false;
+    let userAchievements = {};
+    let achievementDefinitions = [];
 
+    // Definieren Sie alle Aufgaben hier
+    function defineAchievements() {
+        achievementDefinitions = [
+            // Typ: Posten von Artikeln
+            { id: 'post-1-item', type: 'postItem', required: 1, reward: 20, name: 'Erste Anzeige', description: 'Poste deine erste Anzeige.' },
+            { id: 'post-5-items', type: 'postItem', required: 5, reward: 100, name: 'Fünf Anzeigen', description: 'Poste 5 Anzeigen.' },
+            { id: 'post-10-items', type: 'postItem', required: 10, reward: 200, name: 'Zehn Anzeigen', description: 'Poste 10 Anzeigen.' },
+            // Neue, schwere Aufgaben
+            { id: 'post-50-items', type: 'postItem', required: 50, reward: 1500, name: 'Vielposter', description: 'Poste 50 Anzeigen.' },
+            
+            // Typ: Artikel mit Bildern
+            { id: 'post-with-1-img', type: 'postImages', required: 1, reward: 10, name: 'Anzeige mit Bild', description: 'Poste eine Anzeige mit mindestens einem Bild.' },
+            { id: 'post-with-3-img', type: 'postImages', required: 3, reward: 50, name: 'Anzeige mit 3 Bildern', description: 'Poste eine Anzeige mit mindestens 3 Bildern.' },
+            { id: 'post-with-5-img', type: 'postImages', required: 5, reward: 100, name: 'Anzeige mit 5 Bildern', description: 'Poste eine Anzeige mit mindestens 5 Bildern.' },
+
+            // Typ: Käufe
+            { id: 'buy-1-item', type: 'buyItem', required: 1, reward: 30, name: 'Erster Kauf', description: 'Kaufe deinen ersten Artikel.' },
+            { id: 'buy-5-items', type: 'buyItem', required: 5, reward: 150, name: 'Fünf Käufe', description: 'Kaufe 5 Artikel.' },
+            { id: 'buy-10-items', type: 'buyItem', required: 10, reward: 300, name: 'Zehn Käufe', description: 'Kaufe 10 Artikel.' },
+            
+            // Typ: Verkäufe
+            { id: 'sell-1-item', type: 'sellItem', required: 1, reward: 40, name: 'Erster Verkauf', description: 'Verkaufe deinen ersten Artikel.' },
+            { id: 'sell-5-items', type: 'sellItem', required: 5, reward: 200, name: 'Fünf Verkäufe', description: 'Verkaufe 5 Artikel.' },
+            { id: 'sell-10-items', type: 'sellItem', required: 10, reward: 400, name: 'Zehn Verkäufe', description: 'Verkaufe 10 Artikel.' },
+            
+            // Typ: Guthaben-Meilensteine
+            { id: 'balance-1000', type: 'balanceMilestone', required: 1000, reward: 100, name: '1.000 J€', description: 'Erreiche ein Guthaben von 1.000 J€.' },
+            { id: 'balance-5000', type: 'balanceMilestone', required: 5000, reward: 500, name: '5.000 J€', description: 'Erreiche ein Guthaben von 5.000 J€.' },
+            { id: 'balance-10000', type: 'balanceMilestone', required: 10000, reward: 1000, name: '10.000 J€', description: 'Erreiche ein Guthaben von 10.000 J€.' },
+            
+            // Typ: Bearbeiten von Anzeigen
+            { id: 'edit-1-item', type: 'editItem', required: 1, reward: 15, name: 'Erste Bearbeitung', description: 'Bearbeite eine deiner Anzeigen.' },
+            { id: 'edit-5-items', type: 'editItem', required: 5, reward: 75, name: 'Fünf Bearbeitungen', description: 'Bearbeite 5 deiner Anzeigen.' },
+            { id: 'edit-10-items', type: 'editItem', required: 10, reward: 150, name: 'Zehn Bearbeitungen', description: 'Bearbeite 10 deiner Anzeigen.' },
+            
+            // Typ: Löschen von Anzeigen
+            { id: 'delete-1-item', type: 'deleteItem', required: 1, reward: 10, name: 'Erste Löschung', description: 'Lösche eine deiner Anzeigen.' },
+            { id: 'delete-5-items', type: 'deleteItem', required: 5, reward: 50, name: 'Fünf Löschungen', description: 'Lösche 5 deiner Anzeigen.' },
+            { id: 'delete-10-items', type: 'deleteItem', required: 10, reward: 100, name: 'Zehn Löschungen', description: 'Lösche 10 deiner Anzeigen.' },
+            
+            // Typ: Artikel mit Preis-Meilensteinen
+            { id: 'post-expensive-item-100', type: 'postPrice', required: 100, reward: 50, name: 'Anzeige über 100 J€', description: 'Poste einen Artikel mit einem Preis über 100 J€.' },
+            { id: 'post-expensive-item-500', type: 'postPrice', required: 500, reward: 250, name: 'Anzeige über 500 J€', description: 'Poste einen Artikel mit einem Preis über 500 J€.' },
+            { id: 'post-expensive-item-1000', type: 'postPrice', required: 1000, reward: 500, name: 'Anzeige über 1.000 J€', description: 'Poste einen Artikel mit einem Preis über 1.000 J€.' },
+            
+            // Typ: Transaktionen
+            { id: 'complete-1-trans', type: 'completeTransaction', required: 1, reward: 50, name: 'Erste Transaktion', description: 'Schließe eine Transaktion ab (Kauf oder Verkauf).' },
+            { id: 'complete-5-trans', type: 'completeTransaction', required: 5, reward: 250, name: 'Fünf Transaktionen', description: 'Schließe 5 Transaktionen ab.' },
+            { id: 'complete-10-trans', type: 'completeTransaction', required: 10, reward: 500, name: 'Zehn Transaktionen', description: 'Schließe 10 Transaktionen ab.' },
+            // Neue, schwere Aufgaben
+            { id: 'complete-100-trans', type: 'completeTransaction', required: 100, reward: 3000, name: 'Transaktionskönig', description: 'Schließe 100 Transaktionen ab.' },
+            
+            // Typ: Artikelmenge
+            { id: 'post-10-quantity', type: 'postQuantity', required: 10, reward: 20, name: 'Menge von 10', description: 'Poste einen Artikel mit einer Menge von 10 oder mehr.' },
+            { id: 'post-50-quantity', type: 'postQuantity', required: 50, reward: 100, name: 'Menge von 50', description: 'Poste einen Artikel mit einer Menge von 50 oder mehr.' },
+            { id: 'post-100-quantity', type: 'postQuantity', required: 100, reward: 200, name: 'Menge von 100', description: 'Poste einen Artikel mit einer Menge von 100 oder mehr.' },
+            
+            // Typ: Kaufpreis
+            { id: 'buy-high-value', type: 'buyValue', required: 1000, reward: 500, name: 'Großeinkauf', description: 'Kaufe einen Artikel für über 1000 J€.' },
+            { id: 'buy-bulk-10', type: 'buyBulk', required: 10, reward: 200, name: 'Masseneinkauf', description: 'Kaufe 10 Artikel in einer einzelnen Transaktion.' },
+            
+            // Typ: Verkaufspreis
+            { id: 'sell-high-value', type: 'sellValue', required: 1000, reward: 500, name: 'Großverkauf', description: 'Verkaufe einen Artikel für über 1000 J€.' },
+        ];
+    }
+    
     function showMessage(msg, type = 'success') {
       messageBar.textContent = msg;
       messageBar.className = `fixed top-0 left-1/2 -translate-x-1/2 z-50 mt-4 p-4 rounded-lg text-white font-bold text-center transition-all duration-300 transform scale-100 opacity-100 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
@@ -117,7 +238,7 @@
         messageBar.className = `fixed top-0 left-1/2 -translate-x-1/2 z-50 mt-4 p-4 rounded-lg text-white font-bold text-center transition-all duration-300 transform scale-0 opacity-0`;
       }, 3000);
     }
-
+    
     function toggleAdminMode(enable) {
       isAdmin = enable;
       adminStatus.classList.toggle("hidden", !isAdmin);
@@ -130,24 +251,28 @@
         await signInAnonymously(auth);
         userId = auth.currentUser.uid;
         currentUserIdSpan.textContent = userId;
+        defineAchievements();
         listenForUserBalance();
         listenForItems();
+        listenForAchievements();
       } catch (error) {
         showMessage("Fehler bei der Anmeldung: " + error.message, 'error');
       }
     }
-
+    
     const listenForUserBalance = () => {
-      const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-      onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          userBalance = docSnap.data().balance;
-        } else {
-          userBalance = 1000;
-          setDoc(userDocRef, { balance: userBalance });
-        }
-        currentBalanceSpan.textContent = userBalance.toFixed(2);
-      });
+        const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
+        onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                userBalance = docSnap.data().balance;
+            } else {
+                userBalance = 1000;
+                setDoc(userDocRef, { balance: userBalance });
+            }
+            currentBalanceSpan.textContent = userBalance.toFixed(2);
+            // Überprüfen, ob Guthaben-Aufgaben abgeschlossen wurden
+            checkBalanceAchievements(userBalance);
+        });
     };
 
     const listenForItems = () => {
@@ -159,6 +284,147 @@
           renderItem(item);
         });
       });
+    };
+
+    const listenForAchievements = () => {
+        const userAchievementsRef = doc(db, `artifacts/${appId}/users/${userId}/profile/achievements`);
+        onSnapshot(userAchievementsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                userAchievements = docSnap.data();
+            } else {
+                userAchievements = {};
+                setDoc(userAchievementsRef, userAchievements);
+            }
+            renderAchievements();
+        });
+    };
+
+    const updateAchievementProgress = async (type, increment = 1, value = 0) => {
+        const userAchievementsRef = doc(db, `artifacts/${appId}/users/${userId}/profile/achievements`);
+        
+        let newAchievements = { ...userAchievements };
+        if (!newAchievements[type]) {
+            newAchievements[type] = { count: 0, completed: [] };
+        }
+        
+        if (type === 'postItem' || type === 'buyItem' || type === 'sellItem' || type === 'completeTransaction' || type === 'editItem' || type === 'deleteItem') {
+          newAchievements[type].count = (newAchievements[type].count || 0) + increment;
+        } else if (type === 'postImages') {
+            newAchievements[type].imagesPosted = (newAchievements[type].imagesPosted || []).concat(value);
+        } else if (type === 'postPrice') {
+            newAchievements[type].pricesPosted = (newAchievements[type].pricesPosted || []).concat(value);
+        } else if (type === 'postQuantity') {
+            newAchievements[type].quantitiesPosted = (newAchievements[type].quantitiesPosted || []).concat(value);
+        } else if (type === 'buyValue') {
+            newAchievements[type].valuesBought = (newAchievements[type].valuesBought || []).concat(value);
+        } else if (type === 'buyBulk') {
+            newAchievements[type].bulkBuys = (newAchievements[type].bulkBuys || []).concat(value);
+        } else if (type === 'sellValue') {
+            newAchievements[type].valuesSold = (newAchievements[type].valuesSold || []).concat(value);
+        }
+
+        await setDoc(userAchievementsRef, newAchievements);
+        checkAndRewardAchievements();
+    };
+
+    const checkAndRewardAchievements = async () => {
+        const userAchievementsRef = doc(db, `artifacts/${appId}/users/${userId}/profile/achievements`);
+        const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
+        let changesMade = false;
+        
+        for (const achievement of achievementDefinitions) {
+            if (userAchievements[achievement.type] && !userAchievements[achievement.type].completed.includes(achievement.id)) {
+                let isCompleted = false;
+                const progress = userAchievements[achievement.type].count || 0;
+                
+                if (achievement.type === 'postImages' || achievement.type === 'postPrice' || achievement.type === 'postQuantity' || achievement.type === 'buyValue' || achievement.type === 'buyBulk' || achievement.type === 'sellValue') {
+                    // Check logic for specific value-based achievements
+                    const values = userAchievements[achievement.type].imagesPosted || userAchievements[achievement.type].pricesPosted || userAchievements[achievement.type].quantitiesPosted || userAchievements[achievement.type].valuesBought || userAchievements[achievement.type].bulkBuys || userAchievements[achievement.type].valuesSold || [];
+                    isCompleted = values.some(val => val >= achievement.required);
+                } else if (achievement.type === 'balanceMilestone') {
+                    if (userBalance >= achievement.required) {
+                        isCompleted = true;
+                    }
+                } else {
+                    isCompleted = progress >= achievement.required;
+                }
+
+                if (isCompleted) {
+                    if (!userAchievements[achievement.type].completed.includes(achievement.id)) {
+                        userAchievements[achievement.type].completed.push(achievement.id);
+                        await updateDoc(userDocRef, { balance: userBalance + achievement.reward });
+                        showMessage(`Aufgabe "${achievement.name}" abgeschlossen! Belohnung: ${achievement.reward} J€`, 'success');
+                        changesMade = true;
+                    }
+                }
+            }
+        }
+        
+        if (changesMade) {
+            await setDoc(userAchievementsRef, userAchievements);
+        }
+    };
+    
+    const checkBalanceAchievements = (currentBalance) => {
+        // Diese Funktion wird in listenForUserBalance aufgerufen
+        achievementDefinitions.filter(a => a.type === 'balanceMilestone').forEach(achievement => {
+            const isCompleted = userAchievements.balanceMilestone && userAchievements.balanceMilestone.completed.includes(achievement.id);
+            if (!isCompleted && currentBalance >= achievement.required) {
+                updateAchievementProgress('balanceMilestone', 0, currentBalance);
+            }
+        });
+    };
+
+    const renderAchievements = () => {
+        achievementsContainer.innerHTML = '';
+        achievementDefinitions.forEach(achievement => {
+            const progressInfo = userAchievements[achievement.type] || { count: 0, completed: [] };
+            const isCompleted = progressInfo.completed.includes(achievement.id);
+            let currentProgress = progressInfo.count;
+
+            if (achievement.type === 'postImages') {
+                const values = progressInfo.imagesPosted || [];
+                currentProgress = values.filter(val => val >= achievement.required).length;
+            } else if (achievement.type === 'postPrice') {
+                const values = progressInfo.pricesPosted || [];
+                currentProgress = values.filter(val => val >= achievement.required).length;
+            } else if (achievement.type === 'postQuantity') {
+                const values = progressInfo.quantitiesPosted || [];
+                currentProgress = values.filter(val => val >= achievement.required).length;
+            } else if (achievement.type === 'buyValue') {
+                const values = progressInfo.valuesBought || [];
+                currentProgress = values.filter(val => val >= achievement.required).length;
+            } else if (achievement.type === 'buyBulk') {
+                const values = progressInfo.bulkBuys || [];
+                currentProgress = values.filter(val => val >= achievement.required).length;
+            } else if (achievement.type === 'sellValue') {
+                const values = progressInfo.valuesSold || [];
+                currentProgress = values.filter(val => val >= achievement.required).length;
+            }
+            
+            if (achievement.type === 'balanceMilestone') {
+                 currentProgress = userBalance >= achievement.required ? 1 : 0;
+            }
+
+            const maxProgress = achievement.required;
+            const progress = isCompleted ? maxProgress : Math.min(currentProgress, maxProgress);
+            const progressPercentage = (progress / maxProgress) * 100;
+            
+            const card = document.createElement("div");
+            card.className = `p-4 rounded-xl shadow-md ${isCompleted ? 'bg-green-100' : 'bg-gray-100'} transition-all`;
+            
+            card.innerHTML = `
+                <h3 class="text-xl font-bold mb-1">${achievement.name}</h3>
+                <p class="text-sm text-gray-600 mb-2">${achievement.description}</p>
+                <div class="w-full bg-gray-300 rounded-full h-2.5 mb-2">
+                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progressPercentage}%"></div>
+                </div>
+                <p class="text-xs text-gray-500 text-right">${isCompleted ? 'Abgeschlossen!' : `${progress} / ${maxProgress}`}</p>
+                <p class="text-lg font-bold text-yellow-600 mt-2">Belohnung: ${achievement.reward} J€</p>
+            `;
+            
+            achievementsContainer.appendChild(card);
+        });
     };
 
     const renderItem = (item) => {
@@ -180,9 +446,8 @@
         deleteButton.title = "Anzeige löschen";
         deleteButton.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
-            deleteItem(item.id);
-          }
+          // Use a custom modal instead of confirm()
+          showConfirmationModal("Möchten Sie diesen Artikel wirklich löschen?", () => deleteItem(item.id));
         });
 
         const editButton = document.createElement("button");
@@ -191,7 +456,7 @@
         editButton.title = "Anzeige bearbeiten";
         editButton.addEventListener("click", (e) => {
           e.stopPropagation();
-          editItem(item);
+          showEditModal(item);
         });
 
         card.appendChild(deleteButton);
@@ -201,6 +466,32 @@
       card.addEventListener("click", () => showItemDetails(item));
       itemsContainer.appendChild(card);
     };
+
+    function showConfirmationModal(message, onConfirm) {
+      const modal = document.createElement("div");
+      modal.className = "fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50";
+
+      modal.innerHTML = `
+        <div class="bg-white p-6 rounded-xl max-w-sm w-full relative text-center">
+          <p class="text-lg font-bold mb-4">${message}</p>
+          <div class="flex justify-around gap-4">
+            <button id="confirmBtn" class="px-4 py-2 bg-green-500 text-white font-bold rounded hover:bg-green-600">Ja</button>
+            <button id="cancelBtn" class="px-4 py-2 bg-red-500 text-white font-bold rounded hover:bg-red-600">Abbrechen</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.querySelector("#confirmBtn").addEventListener("click", () => {
+        onConfirm();
+        modal.remove();
+      });
+
+      modal.querySelector("#cancelBtn").addEventListener("click", () => {
+        modal.remove();
+      });
+    }
 
     function showItemDetails(item) {
       const modal = document.createElement("div");
@@ -234,47 +525,68 @@
 
       if (item.sellerId === userId || isAdmin) {
         modal.querySelector("#deleteItemBtn").addEventListener("click", () => {
-          if (confirm("Möchten Sie diesen Artikel wirklich löschen?")) {
-            deleteItem(item.id);
-            modal.remove();
-          }
+          showConfirmationModal("Möchten Sie diesen Artikel wirklich löschen?", () => {
+              deleteItem(item.id);
+              modal.remove();
+          });
         });
         modal.querySelector("#editItemBtn").addEventListener("click", () => {
           modal.remove();
-          editItem(item);
+          showEditModal(item);
         });
       }
     }
+    
+    function showEditModal(item) {
+      editItemIdInput.value = item.id;
+      editItemNameInput.value = item.name;
+      editItemPriceInput.value = item.price;
+      editItemQuantityInput.value = item.quantity;
+      editItemImagesInput.value = item.imageUrls.join(", ");
+      editItemDescriptionInput.value = item.description;
+      editModal.classList.remove("hidden");
+    }
 
-    async function editItem(item) {
-      const newName = prompt("Neuer Name:", item.name);
-      if (newName === null) return;
-      const newPrice = parseFloat(prompt("Neuer Preis:", item.price));
-      if (isNaN(newPrice) || newPrice < 0) { showMessage("Ungültiger Preis!", "error"); return; }
-      const newQuantity = parseInt(prompt("Neue Menge:", item.quantity));
-      if (isNaN(newQuantity) || newQuantity < 0) { showMessage("Ungültige Menge!", "error"); return; }
-      const newDesc = prompt("Neue Beschreibung:", item.description);
-      if (newDesc === null) return;
+    closeEditModalBtn.addEventListener("click", () => {
+      editModal.classList.add("hidden");
+    });
+    
+    saveEditBtn.addEventListener("click", async () => {
+      const itemId = editItemIdInput.value;
+      const newName = editItemNameInput.value;
+      const newPrice = parseFloat(editItemPriceInput.value);
+      const newQuantity = parseInt(editItemQuantityInput.value);
+      const newImages = editItemImagesInput.value.split(",").map(url => url.trim()).filter(url => url);
+      const newDescription = editItemDescriptionInput.value;
 
+      if (isNaN(newPrice) || newPrice < 0 || isNaN(newQuantity) || newQuantity < 0 || newName.trim() === "" || newImages.length === 0 || newDescription.trim() === "") {
+        showMessage("Bitte füllen Sie alle Felder korrekt aus.", "error");
+        return;
+      }
+      
       try {
-        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
+        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${itemId}`);
         await updateDoc(itemRef, {
           name: newName,
           price: newPrice,
           quantity: newQuantity,
-          description: newDesc
+          imageUrls: newImages,
+          description: newDescription
         });
+        await updateAchievementProgress('editItem', 1); // Update achievement progress
         showMessage("Artikel erfolgreich bearbeitet!", 'success');
+        editModal.classList.add("hidden");
       } catch (err) {
         console.error(err);
         showMessage("Fehler beim Bearbeiten des Artikels.", 'error');
       }
-    }
+    });
 
     async function deleteItem(itemId) {
       try {
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${itemId}`);
         await deleteDoc(itemRef);
+        await updateAchievementProgress('deleteItem', 1); // Update achievement progress
         showMessage("Artikel erfolgreich gelöscht!", 'success');
       } catch (err) {
         console.error(err);
@@ -283,49 +595,76 @@
     }
 
     async function buyItem(item) {
-  if (item.price > userBalance) {
-    showMessage("Nicht genug Guthaben!", 'error');
-    return;
-  }
-  if (item.quantity <= 0) {
-    showMessage("Artikel nicht mehr verfügbar!", 'error');
-    return;
-  }
+      if (item.price > userBalance) {
+        showMessage("Nicht genug Guthaben!", 'error');
+        return;
+      }
+      if (item.quantity <= 0) {
+        showMessage("Artikel nicht mehr verfügbar!", 'error');
+        return;
+      }
 
-  try {
-    const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
+      try {
+        const itemRef = doc(db, `artifacts/${appId}/public/data/products/${item.id}`);
 
-    // Atomare Transaktion für Menge und Käufer-Subcollection
-    await updateDoc(itemRef, { quantity: item.quantity - 1 });
+        await updateDoc(itemRef, { quantity: item.quantity - 1 });
+        await updateAchievementProgress('buyItem', 1); // Update achievement for buying
+        await updateAchievementProgress('completeTransaction', 1); // Update achievement for transactions
+        await updateAchievementProgress('buyValue', 0, item.price); // Update buy value achievement
+        await updateAchievementProgress('buyBulk', 0, 1); // Update buy bulk achievement
 
-    // Neue Transaktion speichern
-    const transaction = {
-      buyerId: userId,
-      quantity: 1,
-      price: item.price,
-      soldAt: Date.now()
-    };
-    await addDoc(collection(db, `artifacts/${appId}/public/data/products/${item.id}/transactions`), transaction);
+        const transaction = {
+          buyerId: userId,
+          quantity: 1,
+          price: item.price,
+          soldAt: Date.now()
+        };
+        await addDoc(collection(db, `artifacts/${appId}/public/data/products/${item.id}/transactions`), transaction);
 
-    // Guthaben Käufer aktualisieren
-    const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
-    await updateDoc(buyerDocRef, { balance: userBalance - item.price });
+        const buyerDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/balance`);
+        await updateDoc(buyerDocRef, { balance: userBalance - item.price });
 
-    // Guthaben Verkäufer aktualisieren
-    const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
-    const sellerSnap = await getDoc(sellerBalanceRef);
-    if (sellerSnap.exists()) {
-      await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
-    } else {
-      await setDoc(sellerBalanceRef, { balance: item.price });
+        const sellerBalanceRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/balance`);
+        const sellerSnap = await getDoc(sellerBalanceRef);
+        if (sellerSnap.exists()) {
+          await updateDoc(sellerBalanceRef, { balance: sellerSnap.data().balance + item.price });
+        } else {
+          await setDoc(sellerBalanceRef, { balance: item.price });
+        }
+        
+        // Only update 'sellItem' achievement for the seller
+        if (item.sellerId !== userId) {
+          const sellerAchievementsRef = doc(db, `artifacts/${appId}/users/${item.sellerId}/profile/achievements`);
+          let sellerAchievements = {};
+          const sellerAchievementsSnap = await getDoc(sellerAchievementsRef);
+          if (sellerAchievementsSnap.exists()) {
+            sellerAchievements = sellerAchievementsSnap.data();
+          }
+          if (!sellerAchievements.sellItem) {
+            sellerAchievements.sellItem = { count: 0, completed: [] };
+          }
+          sellerAchievements.sellItem.count = (sellerAchievements.sellItem.count || 0) + 1;
+          
+          if (!sellerAchievements.completeTransaction) {
+            sellerAchievements.completeTransaction = { count: 0, completed: [] };
+          }
+          sellerAchievements.completeTransaction.count = (sellerAchievements.completeTransaction.count || 0) + 1;
+
+          if (!sellerAchievements.sellValue) {
+            sellerAchievements.sellValue = { valuesSold: [], completed: [] };
+          }
+          sellerAchievements.sellValue.valuesSold.push(item.price);
+
+          await setDoc(sellerAchievementsRef, sellerAchievements);
+          // TODO: Add logic to check and reward seller's achievements here
+        }
+
+        showMessage("Kauf erfolgreich!", 'success');
+      } catch (err) {
+        console.error(err);
+        showMessage("Fehler beim Kauf.", 'error');
+      }
     }
-
-    showMessage("Kauf erfolgreich!", 'success');
-  } catch (err) {
-    console.error(err);
-    showMessage("Fehler beim Kauf.", 'error');
-  }
-}
 
     addItemForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -344,14 +683,19 @@
 
       const price = parseFloat(document.getElementById("itemPrice").value);
       const quantity = parseInt(document.getElementById("itemQuantity").value);
-      const imageUrls = document.getElementById("itemImages").value.split(",").map(url => url.trim());
+      const imageUrls = document.getElementById("itemImages").value.split(",").map(url => url.trim()).filter(url => url);
       const description = document.getElementById("itemDescription").value;
 
       if (price < 0 || quantity < 0) {
         showMessage("Preis und Menge dürfen nicht negativ sein!", "error");
         return;
       }
-
+      
+      if (imageUrls.length === 0) {
+        showMessage("Mindestens ein Bild muss angegeben werden.", "error");
+        return;
+      }
+      
       const item = {
         name,
         price,
@@ -364,6 +708,11 @@
 
       try {
         await addDoc(collection(db, `artifacts/${appId}/public/data/products`), item);
+        await updateAchievementProgress('postItem', 1); // Update post item achievement
+        await updateAchievementProgress('postImages', 0, imageUrls.length); // Update image achievement
+        await updateAchievementProgress('postPrice', 0, price); // Update price achievement
+        await updateAchievementProgress('postQuantity', 0, quantity); // Update quantity achievement
+
         addItemForm.reset();
         showMessage("Artikel erfolgreich hinzugefügt!", 'success');
       } catch (err) {
@@ -372,7 +721,6 @@
       }
     });
 
-    // Admin: Guthaben ändern
     updateBalanceBtn.addEventListener("click", async () => {
       const targetId = document.getElementById("targetUserId").value.trim();
       const newBal = parseFloat(document.getElementById("newBalance").value);
@@ -392,83 +740,101 @@
       }
     });
 
-    // Transaktionen anzeigen
     myTransactionsBtn.addEventListener("click", async () => {
-  const modal = document.createElement("div");
-  modal.className = "fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start p-4 z-50 overflow-auto";
+      const modal = document.createElement("div");
+      modal.className = "fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start p-4 z-50 overflow-auto";
 
-  modal.innerHTML = `
-    <div class="bg-white p-6 rounded-xl max-w-3xl w-full relative mt-10">
-      <button id="closeTransactionsModal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold">&times;</button>
-      <h2 class="text-2xl font-bold mb-4">Meine Transaktionen</h2>
-      <div id="transactionsContent" class="grid gap-4"></div>
-    </div>
-  `;
+      modal.innerHTML = `
+        <div class="bg-white p-6 rounded-xl max-w-3xl w-full relative mt-10">
+          <button id="closeTransactionsModal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold">&times;</button>
+          <h2 class="text-2xl font-bold mb-4">Meine Transaktionen</h2>
+          <div id="transactionsContent" class="grid gap-4"></div>
+        </div>
+      `;
 
-  document.body.appendChild(modal);
-  modal.querySelector("#closeTransactionsModal").addEventListener("click", () => modal.remove());
+      document.body.appendChild(modal);
+      modal.querySelector("#closeTransactionsModal").addEventListener("click", () => modal.remove());
 
-  const transactionsContent = modal.querySelector("#transactionsContent");
+      const transactionsContent = modal.querySelector("#transactionsContent");
 
-  try {
-    const productsCol = collection(db, `artifacts/${appId}/public/data/products`);
-    const snapshot = await getDocs(productsCol);
+      try {
+        const productsCol = collection(db, `artifacts/${appId}/public/data/products`);
+        const snapshot = await getDocs(productsCol);
 
-    transactionsContent.innerHTML = "";
+        transactionsContent.innerHTML = "";
 
-    for (const docSnap of snapshot.docs) {
-      const item = { id: docSnap.id, ...docSnap.data() };
-      const transCol = collection(db, `artifacts/${appId}/public/data/products/${item.id}/transactions`);
-      const transSnapshot = await getDocs(transCol);
+        for (const docSnap of snapshot.docs) {
+          const item = { id: docSnap.id, ...docSnap.data() };
+          const transCol = collection(db, `artifacts/${appId}/public/data/products/${item.id}/transactions`);
+          const transSnapshot = await getDocs(transCol);
 
-      // Verkäufe
-      transSnapshot.forEach(t => {
-        const trans = t.data();
-        if (item.sellerId === userId) {
-          const soldCard = document.createElement("div");
-          soldCard.className = "p-3 border rounded bg-green-50 flex gap-4";
-          soldCard.innerHTML = `
-            <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
-            <div>
-              <strong>Verkauft:</strong> ${item.name} <br>
-              Preis: ${trans.price.toFixed(2)} J€ <br>
-              An: ${trans.buyerId} <br>
-              Menge: ${trans.quantity} <br>
-              Datum: ${new Date(trans.soldAt).toLocaleString()}
-            </div>
-          `;
-          transactionsContent.appendChild(soldCard);
+          transSnapshot.forEach(t => {
+            const trans = t.data();
+            if (item.sellerId === userId) {
+              const soldCard = document.createElement("div");
+              soldCard.className = "p-3 border rounded bg-green-50 flex gap-4";
+              soldCard.innerHTML = `
+                <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
+                <div>
+                  <strong>Verkauft:</strong> ${item.name} <br>
+                  Preis: ${trans.price.toFixed(2)} J€ <br>
+                  An: ${trans.buyerId} <br>
+                  Menge: ${trans.quantity} <br>
+                  Datum: ${new Date(trans.soldAt).toLocaleString()}
+                </div>
+              `;
+              transactionsContent.appendChild(soldCard);
+            }
+
+            if (trans.buyerId === userId) {
+              const boughtCard = document.createElement("div");
+              boughtCard.className = "p-3 border rounded bg-blue-50 flex gap-4";
+              boughtCard.innerHTML = `
+                <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
+                <div>
+                  <strong>Gekauft:</strong> ${item.name} <br>
+                  Preis: ${trans.price.toFixed(2)} J€ <br>
+                  Von: ${item.sellerId} <br>
+                  Menge: ${trans.quantity} <br>
+                  Datum: ${new Date(trans.soldAt).toLocaleString()}
+                </div>
+              `;
+              transactionsContent.appendChild(boughtCard);
+            }
+          });
         }
 
-        // Käufe
-        if (trans.buyerId === userId) {
-          const boughtCard = document.createElement("div");
-          boughtCard.className = "p-3 border rounded bg-blue-50 flex gap-4";
-          boughtCard.innerHTML = `
-            <img src="${item.imageUrls[0]}" alt="${item.name}" class="w-20 h-20 object-cover rounded">
-            <div>
-              <strong>Gekauft:</strong> ${item.name} <br>
-              Preis: ${trans.price.toFixed(2)} J€ <br>
-              Von: ${item.sellerId} <br>
-              Menge: ${trans.quantity} <br>
-              Datum: ${new Date(trans.soldAt).toLocaleString()}
-            </div>
-          `;
-          transactionsContent.appendChild(boughtCard);
+        if (transactionsContent.innerHTML === "") {
+          transactionsContent.innerHTML = "<p class='text-gray-500'>Keine Transaktionen gefunden.</p>";
         }
-      });
-    }
+      } catch (err) {
+        console.error(err);
+        showMessage("Fehler beim Laden der Transaktionen.", "error");
+      }
+    });
 
-    if (transactionsContent.innerHTML === "") {
-      transactionsContent.innerHTML = "<p class='text-gray-500'>Keine Transaktionen gefunden.</p>";
-    }
-  } catch (err) {
-    console.error(err);
-    showMessage("Fehler beim Laden der Transaktionen.", "error");
-  }
-});
+    // Tab-Funktionalität
+    tabMarketplace.addEventListener("click", () => {
+      viewMarketplace.classList.remove("hidden");
+      viewAchievements.classList.add("hidden");
+      tabMarketplace.classList.add("bg-blue-600", "text-white", "hover:bg-blue-700");
+      tabMarketplace.classList.remove("bg-gray-200", "text-gray-800", "hover:bg-gray-300");
+      tabAchievements.classList.add("bg-gray-200", "text-gray-800", "hover:bg-gray-300");
+      tabAchievements.classList.remove("bg-blue-600", "text-white", "hover:bg-blue-700");
+    });
+
+    tabAchievements.addEventListener("click", () => {
+      viewAchievements.classList.remove("hidden");
+      viewMarketplace.classList.add("hidden");
+      tabAchievements.classList.add("bg-blue-600", "text-white", "hover:bg-blue-700");
+      tabAchievements.classList.remove("bg-gray-200", "text-gray-800", "hover:bg-gray-300");
+      tabMarketplace.classList.add("bg-gray-200", "text-gray-800", "hover:bg-gray-300");
+      tabMarketplace.classList.remove("bg-blue-600", "text-white", "hover:bg-blue-700");
+      renderAchievements();
+    });
 
     authenticate();
   </script>
 </body>
 </html>
+
