@@ -5,136 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mein Online-Marktplatz</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f3f4f6;
-    }
-    .container {
-      max-width: 1200px;
-    }
-    .clickable-card {
-      cursor: pointer;
-    }
-    .image-carousel {
-      display: flex;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      gap: 8px;
-    }
-    .image-carousel img {
-      flex: 0 0 auto;
-      width: 100%;
-      max-width: 100%;
-      height: 300px;
-      object-fit: cover;
-      border-radius: 8px;
-      scroll-snap-align: start;
-    }
-  </style>
+  <style> /* ... unverändert ... */ </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
+  <!-- ... unverändert bis Scoreboard-Ansicht ... -->
 
-  <!-- Nachrichtenleiste -->
-  <div id="messageBar" class="fixed top-0 left-1/2 -translate-x-1/2 z-50 mt-4 p-4 rounded-lg text-white font-bold text-center transition-all duration-300 transform scale-0 opacity-0"></div>
+  <!-- Scoreboard-Ansicht -->
+  <div id="viewScoreboard" class="hidden">
+    <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Scoreboard — Top 10 Guthaben</h2>
 
-  <div class="container mx-auto p-6 bg-white rounded-xl shadow-lg">
-    <h1 class="text-4xl md:text-5xl font-extrabold text-center text-gray-800 mb-2">Mein Online-Marktplatz</h1>
-    <p class="text-center text-gray-500 mb-6 md:text-lg">Biete Artikel an und finde tolle Angebote!</p>
-
-    <!-- Tabs -->
-    <div class="flex justify-center mb-6">
-      <button id="tabMarketplace" class="px-6 py-2 rounded-l-lg font-bold transition-colors bg-blue-600 text-white hover:bg-blue-700">Marktplatz</button>
-      <button id="tabAchievements" class="px-6 py-2 font-bold transition-colors bg-gray-200 text-gray-800 hover:bg-gray-300">Aufgaben</button>
-      <button id="tabScoreboard" class="px-6 py-2 rounded-r-lg font-bold transition-colors bg-gray-200 text-gray-800 hover:bg-gray-300">Scoreboard</button>
-    </div>
-
-    <!-- Marktplatz-Ansicht -->
-    <div id="viewMarketplace">
-        <div id="userInfo" class="flex flex-col md:flex-row justify-center items-center gap-4 text-sm text-gray-600 mb-6 p-2 bg-gray-200 rounded-lg">
-          <p>Deine Nutzer-ID: <span id="currentUserId" class="font-mono font-bold text-blue-700"></span></p>
-          <p>Dein Guthaben: <span id="currentBalance" class="font-bold text-green-600"></span> J€</p>
-          <p id="currentDisplayName" class="text-gray-700 font-semibold"></p>
-          <p id="adminStatus" class="text-red-600 font-bold hidden">[ADMIN-MODUS]</p>
-        </div>
-
-        <!-- Admin-Guthabenkontrolle -->
-        <div id="adminBalanceControl" class="hidden mt-4 p-4 bg-yellow-50 rounded-lg shadow-inner">
-          <h3 class="text-lg font-bold mb-2 text-gray-700">Guthaben eines Nutzers ändern</h3>
-          <input type="text" id="targetUserId" placeholder="Nutzer-ID" class="w-full p-2 mb-2 rounded border border-gray-300">
-          <input type="number" id="newBalance" placeholder="Neues Guthaben (J€)" step="0.01" class="w-full p-2 mb-2 rounded border border-gray-300">
-          <button id="updateBalanceBtn" class="w-full p-2 bg-green-500 text-white font-bold rounded hover:bg-green-600">Guthaben ändern</button>
-        </div>
-
-        <button id="myTransactionsBtn" class="mt-4 p-2 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 transition">Meine Transaktionen</button>
-
-        <form id="addItemForm" class="bg-blue-50 p-6 rounded-xl shadow-inner mb-8">
-          <h2 class="text-2xl font-bold text-gray-700 mb-4">Artikel anbieten</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" id="itemName" placeholder="Artikelbezeichnung" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-            <input type="number" id="itemPrice" placeholder="Preis in J€ (z.B. 9.99)" step="0.01" min="0" required class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-          </div>
-          <input type="number" id="itemQuantity" placeholder="Menge" min="0" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-          <textarea id="itemImages" placeholder="Bild-URLs (durch Komma getrennt)" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
-          <textarea id="itemDescription" placeholder="Artikelbeschreibung" required class="w-full mt-4 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
-          <button type="submit" class="w-full mt-6 p-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-md">Artikel posten</button>
-        </form>
-
-        <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aktuelle Angebote</h2>
-        <div id="itemsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Artikel werden hier dynamisch eingefügt -->
-        </div>
-    </div>
-
-    <!-- Aufgaben-Ansicht -->
-    <div id="viewAchievements" class="hidden">
-      <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Aufgaben und Belohnungen</h2>
-      <div id="achievementsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Aufgaben werden hier dynamisch eingefügt -->
+    <div class="max-w-xl mx-auto mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
+      <p class="mb-2 text-sm text-gray-600">Gib deinen Anzeigenamen ein, um ihn mit deiner ID zu verknüpfen. Dieser Name erscheint in deinen Angeboten und Transaktionen.</p>
+      <div class="flex gap-2">
+        <input id="displayNameInput" placeholder="Dein Anzeigename" class="flex-1 p-2 rounded border border-gray-300">
+        <button id="connectNameBtn" class="p-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700">Verbinden</button>
       </div>
+      <p id="nameStatus" class="mt-2 text-sm text-gray-500"></p>
     </div>
 
-    <!-- Scoreboard-Ansicht -->
-    <div id="viewScoreboard" class="hidden">
-      <h2 class="text-3xl font-bold text-gray-700 mt-8 mb-4 text-center">Scoreboard — Top 10 Guthaben</h2>
-
-      <div class="max-w-xl mx-auto mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
-        <p class="mb-2 text-sm text-gray-600">Gib deinen Anzeigenamen ein, um ihn mit deiner ID zu verknüpfen. Dieser Name erscheint in deinen Angeboten und Transaktionen.</p>
-        <div class="flex gap-2">
-          <input id="displayNameInput" placeholder="Dein Anzeigename" class="flex-1 p-2 rounded border border-gray-300">
-          <button id="connectNameBtn" class="p-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700">Verbinden</button>
-        </div>
-        <p id="nameStatus" class="mt-2 text-sm text-gray-500"></p>
-      </div>
-
-      <div id="scoreboardList" class="max-w-3xl mx-auto grid gap-2">
-        <!-- Top10 Einträge -->
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Modal-Fenster für die Bearbeitung -->
-  <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50 hidden">
-    <div class="bg-white p-6 rounded-xl max-w-lg w-full relative max-h-[90vh] overflow-y-auto">
-      <button id="closeEditModal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold">&times;</button>
-      <h2 class="text-2xl font-bold mb-4">Artikel bearbeiten</h2>
-      <input type="hidden" id="editItemId">
-      <label for="editItemName" class="block text-gray-700 font-bold mb-2">Artikelbezeichnung:</label>
-      <input type="text" id="editItemName" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-      <label for="editItemPrice" class="block text-gray-700 font-bold mb-2">Preis in J€:</label>
-      <input type="number" id="editItemPrice" step="0.01" min="0" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-      <label for="editItemQuantity" class="block text-gray-700 font-bold mb-2">Menge:</label>
-      <input type="number" id="editItemQuantity" min="0" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-      <label for="editItemImages" class="block text-gray-700 font-bold mb-2">Bild-URLs (durch Komma getrennt):</label>
-      <textarea id="editItemImages" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
-      <label for="editItemDescription" class="block text-gray-700 font-bold mb-2">Artikelbeschreibung:</label>
-      <textarea id="editItemDescription" class="w-full p-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors h-24 resize-none"></textarea>
-      <button id="saveEditBtn" class="w-full mt-4 p-4 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-md">Änderungen speichern</button>
+    <!-- Wichtig: min-height damit beim Laden nicht nur das Namensfeld sichtbar wirkt -->
+    <div id="scoreboardList" class="max-w-3xl mx-auto grid gap-2 min-h-[160px]">
+      <!-- Top10 Einträge -->
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
+  <!-- ... restlicher HTML-Inhalt / Modals / Firebase-SDKs ... -->
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -155,24 +51,171 @@
       limit
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey:"AIzaSyCxq5QQU-H-gjbzaDqveRZOh6-dI452wuI",
-      authDomain: "website-market-2a947.firebaseapp.com",
-      projectId: "website-market-2a947",
-      storageBucket: "website-market-2a947.firebasestorage.app",
-      messagingSenderId: "314261738277",
-      appId: "1:314261738277:web:a50c116a423d63455300cc"
-    };
-
+    const firebaseConfig = { /* ... unverändert ... */ };
     const appId = "mein-marktplatz";
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const addItemForm = document.getElementById("addItemForm");
-    const itemsContainer = document.getElementById("itemsContainer");
-    const currentUserIdSpan = document.getElementById("currentUserId");
-    const currentBalanceSpan = document.getElementById("currentBalance");
+    // DOM-Elemente (unverändert)
+    const scoreboardList = document.getElementById("scoreboardList");
+    // ... alle anderen DOM-Variablen wie im Original ...
+
+    let unsubscribeTopBalances = null; // <-- speichert unsubscribe für listener
+
+    // Utility: get display name for a user, with cache (unverändert)
+    async function getUserDisplayName(uid) {
+      if (!uid) return '';
+      if (nameCache[uid] !== undefined) return nameCache[uid];
+      try {
+        const nameRef = doc(db, `artifacts/${appId}/users/${uid}/profile/name`);
+        const snap = await getDoc(nameRef);
+        const display = snap.exists() ? (snap.data().displayName || '') : '';
+        nameCache[uid] = display;
+        return display;
+      } catch (err) {
+        console.error("Fehler beim Laden des Namens:", err);
+        return '';
+      }
+    }
+
+    // --- Verbesserter Realtime-Listener für Top-Balances ---
+    async function listenTopBalances() {
+      try {
+        // Wenn Listener bereits aktiv ist, nicht erneut registrieren
+        if (unsubscribeTopBalances) return;
+
+        const q = query(collectionGroup(db, 'profile'));
+        // onSnapshot gibt eine Funktion zurück, die wir später aufrufen können, um zu unsubscriben
+        unsubscribeTopBalances = onSnapshot(q, async (snapshot) => {
+          // Sofort Ladehinweis anzeigen
+          scoreboardList.innerHTML = '<p class="text-gray-500">Lade Scoreboard…</p>';
+
+          // Nur Dokumente mit der id 'balance' verwenden (diese Dokumente enthalten das Feld balance)
+          const balanceDocs = snapshot.docs.filter(d => d.id === 'balance' && typeof d.data().balance === 'number');
+
+          // Map zu Einträgen (uid, balance)
+          const entries = balanceDocs.map(d => ({ uid: d.ref.parent?.parent?.id || null, balance: d.data().balance }));
+
+          // Sortiere absteigend nach balance
+          entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+
+          // Wenn keine Einträge, informiere den Benutzer
+          if (entries.length === 0) {
+            scoreboardList.innerHTML = "<p class='text-gray-500'>Noch keine Nutzer/Guthaben vorhanden.</p>";
+            return;
+          }
+
+          // Begrenze auf Top 10 und löse alle Display-Namen parallel (schneller)
+          const top = entries.slice(0, 10);
+          const namePromises = top.map(e => getUserDisplayName(e.uid));
+          const names = await Promise.all(namePromises);
+
+          // Rendern
+          scoreboardList.innerHTML = '';
+          for (let i = 0; i < top.length; i++) {
+            const e = top[i];
+            const display = e.uid ? (names[i] || e.uid) : 'Unbekannt';
+
+            const row = document.createElement("div");
+            row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
+            row.innerHTML = `
+              <div>
+                <div class="font-bold">${i+1}. ${escapeHtml(display)}</div>
+                <div class="text-sm text-gray-500">ID: ${e.uid}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold">${(e.balance || 0).toFixed(2)} J€</div>
+              </div>
+            `;
+            scoreboardList.appendChild(row);
+          }
+        }, (err) => {
+          console.error("Realtime-Listener Fehler (TopBalances):", err);
+          scoreboardList.innerHTML = "<p class='text-red-500'>Fehler beim Laden des Scoreboards.</p>";
+        });
+      } catch (err) {
+        console.error("Fehler beim Laden der Top10:", err);
+        scoreboardList.innerHTML = "<p class='text-red-500'>Fehler beim Laden des Scoreboards.</p>";
+      }
+    }
+
+    // Einmaliger Fetch, wenn Tab geöffnet wird (sorgt für sofortige Anzeige)
+    async function fetchTopBalances() {
+      try {
+        scoreboardList.innerHTML = '<p class="text-gray-500">Lade Scoreboard…</p>';
+
+        const q = query(collectionGroup(db, 'profile'));
+        const snap = await getDocs(q);
+        const balanceDocs = snap.docs.filter(d => d.id === 'balance' && typeof d.data().balance === 'number');
+        const entries = balanceDocs.map(d => ({ uid: d.ref.parent?.parent?.id || null, balance: d.data().balance }));
+        entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+
+        if (entries.length === 0) {
+          scoreboardList.innerHTML = "<p class='text-gray-500'>Noch keine Nutzer/Guthaben vorhanden.</p>";
+          return;
+        }
+
+        const top = entries.slice(0, 10);
+        const namePromises = top.map(e => getUserDisplayName(e.uid));
+        const names = await Promise.all(namePromises);
+
+        scoreboardList.innerHTML = '';
+        for (let i = 0; i < top.length; i++) {
+          const e = top[i];
+          const display = e.uid ? (names[i] || e.uid) : 'Unbekannt';
+
+          const row = document.createElement("div");
+          row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
+          row.innerHTML = `
+            <div>
+              <div class="font-bold">${i+1}. ${escapeHtml(display)}</div>
+              <div class="text-sm text-gray-500">ID: ${e.uid}</div>
+            </div>
+            <div class="text-right">
+              <div class="font-bold">${(e.balance || 0).toFixed(2)} J€</div>
+            </div>
+          `;
+          scoreboardList.appendChild(row);
+        }
+      } catch (err) {
+        console.error("Fehler beim einmaligen Laden der Top10:", err);
+        scoreboardList.innerHTML = "<p class='text-red-500'>Fehler beim Laden des Scoreboards.</p>";
+      }
+    }
+
+    // Tab-Funktionalität: beim Öffnen Scoreboard-Einträge sofort laden + sicherstellen, dass listener aktiv ist
+    tabScoreboard.addEventListener("click", async () => {
+      viewScoreboard.classList.remove("hidden");
+      viewMarketplace.classList.add("hidden");
+      viewAchievements.classList.add("hidden");
+      tabScoreboard.classList.add("bg-blue-600", "text-white", "hover:bg-blue-700");
+      tabScoreboard.classList.remove("bg-gray-200", "text-gray-800", "hover:bg-gray-300");
+      tabMarketplace.classList.add("bg-gray-200", "text-gray-800", "hover:bg-gray-300");
+      tabMarketplace.classList.remove("bg-blue-600", "text-white", "hover:bg-blue-700");
+      tabAchievements.classList.add("bg-gray-200", "text-gray-800", "hover:bg-gray-300");
+      tabAchievements.classList.remove("bg-blue-600", "text-white", "hover:bg-blue-700");
+
+      // Beim Öffnen: sofort einen einmaligen Fetch, und stelle sicher, dass der Realtime-listener läuft.
+      await fetchTopBalances();
+      listenTopBalances(); // startet listener falls noch nicht aktiv
+    });
+
+    // kleine helper zum Escapen (unverändert)
+    function escapeHtml(unsafe) {
+      return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // rufe authenticate() wie vorher auf
+    authenticate();
+  </script>
+</body>
+</html>Id("currentBalance");
     const messageBar = document.getElementById("messageBar");
     const adminStatus = document.getElementById("adminStatus");
     const adminBalanceControl = document.getElementById("adminBalanceControl");
