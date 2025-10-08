@@ -278,7 +278,8 @@
         listenForItems();
         listenForAchievements();
         listenForUserName(); // listen for own display name
-        listenTopBalances(); // realtime top10 (fixed)
+        await fetchTopBalances(); // lade direkt beim Login die Scoreboard-Daten
+listenTopBalances(); // aktiviere danach den Live-Listener
       } catch (error) {
         showMessage("Fehler bei der Anmeldung: " + error.message, 'error');
       }
@@ -917,6 +918,7 @@
         console.error(err);
         nameStatus.textContent = "Fehler beim Verknüpfen des Namens.";
       }
+      await fetchTopBalances();
     });
 
     // --- FIXED: Top 10 listener ---
