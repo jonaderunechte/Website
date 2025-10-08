@@ -928,7 +928,7 @@ listenTopBalances(); // aktiviere danach den Live-Listener
     // then sort by balance and render the top 10. This avoids needing special indexes and works reliably.
     async function listenTopBalances() {
       try {
-        const q = query(collectionGroup(db, 'profile'));
+        const q = query(collectionGroup(db, 'balance'));
         onSnapshot(q, async (snapshot) => {
           // pick only documents named 'balance' (these contain the numeric balance field)
           const balanceDocs = snapshot.docs.filter(d => d.id === 'balance' && typeof d.data().balance === 'number');
@@ -977,7 +977,7 @@ listenTopBalances(); // aktiviere danach den Live-Listener
         // reuse the listener (which already updates) but also do a one-time fetch if listener isn't active yet
         // In practice listenTopBalances() sets up the realtime listener during authenticate().
         // Here we trigger a single fetch via the same collectionGroup approach for instant update.
-        const q = query(collectionGroup(db, 'profile'));
+        const q = query(collectionGroup(db, 'balance'));
         const snap = await getDocs(q);
         const balanceDocs = snap.docs.filter(d => d.id === 'balance' && typeof d.data().balance === 'number');
         const entries = balanceDocs.map(d => ({ uid: d.ref.parent?.parent?.id || null, balance: d.data().balance }));
