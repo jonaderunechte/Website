@@ -926,50 +926,50 @@ listenTopBalances(); // aktiviere danach den Live-Listener
     // under the 'profile' subcollection (i.e. artifacts/{appId}/users/{uid}/profile/balance). collectionGroup('balance')
     // returns nothing. We now query collectionGroup('profile') and filter documents named 'balance' client-side,
     // then sort by balance and render the top 10. This avoids needing special indexes and works reliably.
-    async function listenTopBalances() {
-      try {
-        const q = query(collectionGroup(db, 'profile'));
-        onSnapshot(q, async (snapshot) => {
-          // pick only documents named 'balance' (these contain the numeric balance field)
-          const balanceDocs = snapshot.docs.filter(d => d.id === 'balance' && typeof d.data().balance === 'number');
+async function listenTopBalances() {
+  try {
+    const q = query(collectionGroup(db, 'balance'));
+    onSnapshot(q, async (snapshot) => {
+      const entries = await Promise.all(snapshot.docs.map(async (d) => {
+        // Pfad: artifacts/{appId}/users/{uid}/profile/balance
+        const uid = d.ref.parent?.parent?.id || null;
+        return { uid, balance: d.data().balance };
+      }));
 
-          const entries = await Promise.all(balanceDocs.map(async (d) => {
-            // path example: artifacts/{appId}/users/{uid}/profile/balance
-            const uid = d.ref.parent?.parent?.id || null;
-            return { uid, balance: d.data().balance };
-          }));
+      // Nur Einträge mit gültigem Guthaben
+      const validEntries = entries.filter(e => typeof e.balance === 'number' && e.uid);
 
-          // sort descending by balance
-          entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+      // Sortiere absteigend
+      validEntries.sort((a, b) => b.balance - a.balance);
 
-          // render top 10
-          scoreboardList.innerHTML = '';
-          for (let i = 0; i < Math.min(entries.length, 10); i++) {
-            const e = entries[i];
-            const display = e.uid ? (await getUserDisplayName(e.uid)) || e.uid : 'Unbekannt';
+      // Rendere Top 10
+      scoreboardList.innerHTML = '';
+      for (let i = 0; i < Math.min(validEntries.length, 10); i++) {
+        const e = validEntries[i];
+        const display = (await getUserDisplayName(e.uid)) || e.uid;
 
-            const row = document.createElement("div");
-            row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
-            row.innerHTML = `
-              <div>
-                <div class="font-bold">${i+1}. ${escapeHtml(display)}</div>
-                <div class="text-sm text-gray-500">ID: ${e.uid}</div>
-              </div>
-              <div class="text-right">
-                <div class="font-bold">${(e.balance || 0).toFixed(2)} J€</div>
-              </div>
-            `;
-            scoreboardList.appendChild(row);
-          }
-
-          if (entries.length === 0) {
-            scoreboardList.innerHTML = "<p class='text-gray-500'>Noch keine Nutzer/Guthaben vorhanden.</p>";
-          }
-        });
-      } catch (err) {
-        console.error("Fehler beim Laden der Top10:", err);
+        const row = document.createElement("div");
+        row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
+        row.innerHTML = `
+          <div>
+            <div class="font-bold">${i + 1}. ${escapeHtml(display)}</div>
+            <div class="text-sm text-gray-500">ID: ${e.uid}</div>
+          </div>
+          <div class="text-right">
+            <div class="font-bold">${(e.balance || 0).toFixed(2)} J€</div>
+          </div>
+        `;
+        scoreboardList.appendChild(row);
       }
-    }
+
+      if (validEntries.length === 0) {
+        scoreboardList.innerHTML = "<p class='text-gray-500'>Noch keine Nutzer/Guthaben vorhanden.</p>";
+      }
+    });
+  } catch (err) {
+    console.error("Fehler beim Laden der Top10:", err);
+  }
+}
 
     // allow on-demand fetch when opening scoreboard to ensure freshness
     async function fetchTopBalances() {
