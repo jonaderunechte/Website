@@ -271,15 +271,15 @@
     async function authenticate() {
       try {
         await signInAnonymously(auth);
-        userId = auth.currentUser.uid;
-        currentUserIdSpan.textContent = userId;
-        defineAchievements();
-        listenForUserBalance();
-        listenForItems();
-        listenForAchievements();
-        listenForUserName(); // listen for own display name
-        await fetchTopBalances(); // lade direkt beim Login die Scoreboard-Daten
-listenTopBalances(); // aktiviere danach den Live-Listener
+userId = auth.currentUser.uid;
+currentUserIdSpan.textContent = userId;
+defineAchievements();
+listenForUserBalance();
+listenForItems();
+listenForAchievements();
+listenForUserName();
+await fetchTopBalances();   // einmalig sofort laden
+listenTopBalances();       // und dann Live-Updates
       } catch (error) {
         showMessage("Fehler bei der Anmeldung: " + error.message, 'error');
       }
@@ -926,87 +926,92 @@ listenTopBalances(); // aktiviere danach den Live-Listener
     // under the 'profile' subcollection (i.e. artifacts/{appId}/users/{uid}/profile/balance). collectionGroup('balance')
     // returns nothing. We now query collectionGroup('profile') and filter documents named 'balance' client-side,
     // then sort by balance and render the top 10. This avoids needing special indexes and works reliably.
-    async function listenTopBalances() {
-      try {
-        const q = query(collectionGroup(db, 'balance'));
-        onSnapshot(q, async (snapshot) => {
-          // pick only documents named 'balance' (these contain the numeric balance field)
-          const balanceDocs = snapshot.docs.filter(d => d.id === 'balance' && typeof d.data().balance === 'number');
+    // --- Scoreboard: robustere Version ---
+// Helper: rendert die übergebenen Einträge (async, weil wir Display-Namen holen)
+async function renderScoreboard(entries) {
+  scoreboardList.innerHTML = '';
 
-          const entries = await Promise.all(balanceDocs.map(async (d) => {
-            // path example: artifacts/{appId}/users/{uid}/profile/balance
-            const uid = d.ref.parent?.parent?.id || null;
-            return { uid, balance: d.data().balance };
-          }));
+  if (!entries || entries.length === 0) {
+    scoreboardList.innerHTML = "<p class='text-gray-500'>Noch keine Nutzer/Guthaben vorhanden.</p>";
+    return;
+  }
 
-          // sort descending by balance
-          entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+  // Hole Display-Namen parallel (Cache in getUserDisplayName spart Calls)
+  const slice = entries.slice(0, 10);
+  const rows = await Promise.all(slice.map(async (e, idx) => {
+    const display = e.uid ? (await getUserDisplayName(e.uid)) || e.uid : 'Unbekannt';
+    const row = document.createElement("div");
+    row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
+    row.innerHTML = `
+      <div>
+        <div class="font-bold">${idx + 1}. ${escapeHtml(display)}</div>
+        <div class="text-sm text-gray-500">ID: ${e.uid}</div>
+      </div>
+      <div class="text-right">
+        <div class="font-bold">${(e.balance || 0).toFixed(2)} J€</div>
+      </div>
+    `;
+    return row;
+  }));
 
-          // render top 10
-          scoreboardList.innerHTML = '';
-          for (let i = 0; i < Math.min(entries.length, 10); i++) {
-            const e = entries[i];
-            const display = e.uid ? (await getUserDisplayName(e.uid)) || e.uid : 'Unbekannt';
+  rows.forEach(r => scoreboardList.appendChild(r));
+}
 
-            const row = document.createElement("div");
-            row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
-            row.innerHTML = `
-              <div>
-                <div class="font-bold">${i+1}. ${escapeHtml(display)}</div>
-                <div class="text-sm text-gray-500">ID: ${e.uid}</div>
-              </div>
-              <div class="text-right">
-                <div class="font-bold">${(e.balance || 0).toFixed(2)} J€</div>
-              </div>
-            `;
-            scoreboardList.appendChild(row);
-          }
+// Realtime listener (wird beim Login gesetzt)
+async function listenTopBalances() {
+  try {
+    const q = query(collectionGroup(db, 'profile')); // <- wichtig: 'profile' ist Collection, 'balance' ist DOC
+    onSnapshot(q, async (snapshot) => {
+      console.log('[Scoreboard] profile snapshot size:', snapshot.size);
 
-          if (entries.length === 0) {
-            scoreboardList.innerHTML = "<p class='text-gray-500'>Noch keine Nutzer/Guthaben vorhanden.</p>";
-          }
-        });
-      } catch (err) {
-        console.error("Fehler beim Laden der Top10:", err);
-      }
-    }
+      // Filter: nur docs mit id 'balance', numerisches Feld und im richtigen app-Pfad
+      const balanceDocs = snapshot.docs.filter(d => {
+        return d.id === 'balance'
+          && d.data()
+          && typeof d.data().balance === 'number'
+          && d.ref.path.includes(`/artifacts/${appId}/users/`);
+      });
 
-    // allow on-demand fetch when opening scoreboard to ensure freshness
-    async function fetchTopBalances() {
-      try {
-        // reuse the listener (which already updates) but also do a one-time fetch if listener isn't active yet
-        // In practice listenTopBalances() sets up the realtime listener during authenticate().
-        // Here we trigger a single fetch via the same collectionGroup approach for instant update.
-        const q = query(collectionGroup(db, 'balance'));
-        const snap = await getDocs(q);
-        const balanceDocs = snap.docs.filter(d => d.id === 'balance' && typeof d.data().balance === 'number');
-        const entries = balanceDocs.map(d => ({ uid: d.ref.parent?.parent?.id || null, balance: d.data().balance }));
-        entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+      console.log('[Scoreboard] balance docs found:', balanceDocs.length);
 
-        scoreboardList.innerHTML = '';
-        for (let i = 0; i < Math.min(entries.length, 10); i++) {
-          const e = entries[i];
-          const display = e.uid ? (await getUserDisplayName(e.uid)) || e.uid : 'Unbekannt';
+      const entries = balanceDocs.map(d => {
+        const uid = d.ref.parent?.parent?.id || null; // artifacts/{appId}/users/{uid}/profile/balance -> parent.parent = user doc
+        return { uid, balance: Number(d.data().balance || 0) };
+      });
 
-          const row = document.createElement("div");
-          row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
-          row.innerHTML = `
-            <div>
-              <div class="font-bold">${i+1}. ${escapeHtml(display)}</div>
-              <div class="text-sm text-gray-500">ID: ${e.uid}</div>
-            </div>
-            <div class="text-right">
-              <div class="font-bold">${(e.balance || 0).toFixed(2)} J€</div>
-            </div>
-          `;
-          scoreboardList.appendChild(row);
-        }
+      // Sortiere absteigend und rendere
+      entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+      await renderScoreboard(entries);
+    });
+  } catch (err) {
+    console.error('[Scoreboard] listenTopBalances error:', err);
+  }
+}
 
-        if (entries.length === 0) scoreboardList.innerHTML = "<p class='text-gray-500'>Noch keine Nutzer/Guthaben vorhanden.</p>";
-      } catch (err) {
-        console.error("Fehler beim einmaligen Laden der Top10:", err);
-      }
-    }
+// One-time Fetch wenn z.B. Tab geöffnet wird
+async function fetchTopBalances() {
+  try {
+    const q = query(collectionGroup(db, 'profile'));
+    const snap = await getDocs(q);
+    console.log('[Scoreboard] fetch getDocs size:', snap.size);
+
+    const balanceDocs = snap.docs.filter(d => {
+      return d.id === 'balance'
+        && d.data()
+        && typeof d.data().balance === 'number'
+        && d.ref.path.includes(`/artifacts/${appId}/users/`);
+    });
+
+    console.log('[Scoreboard] fetch balance docs:', balanceDocs.length);
+
+    const entries = balanceDocs.map(d => ({ uid: d.ref.parent?.parent?.id || null, balance: Number(d.data().balance || 0) }));
+    entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+
+    await renderScoreboard(entries);
+  } catch (err) {
+    console.error('[Scoreboard] fetchTopBalances error:', err);
+  }
+}
 
     // small helper to escape text to avoid injection in innerHTML where user data is used
     function escapeHtml(unsafe) {
