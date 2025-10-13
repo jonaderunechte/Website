@@ -957,59 +957,42 @@ async function renderScoreboard(entries) {
   rows.forEach(r => scoreboardList.appendChild(r));
 }
 
-// Realtime listener (wird beim Login gesetzt)
+//// --- Neue Version: Scoreboard richtig laden ---
+async function fetchTopBalances() {
+  try {
+    const q = query(collectionGroup(db, 'balance'));
+    const snap = await getDocs(q);
+
+    const entries = snap.docs
+      .filter(d => d.ref.path.includes(`/artifacts/${appId}/users/`))
+      .map(d => ({
+        uid: d.ref.parent.parent.id, // balance -> profile -> userId
+        balance: Number(d.data().balance || 0)
+      }));
+
+    entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+    await renderScoreboard(entries);
+  } catch (err) {
+    console.error('[Scoreboard] fetchTopBalances error:', err);
+  }
+}
+
 async function listenTopBalances() {
   try {
-    const q = query(collectionGroup(db, 'profile')); // <- wichtig: 'profile' ist Collection, 'balance' ist DOC
+    const q = query(collectionGroup(db, 'balance'));
     onSnapshot(q, async (snapshot) => {
-      console.log('[Scoreboard] profile snapshot size:', snapshot.size);
+      const entries = snapshot.docs
+        .filter(d => d.ref.path.includes(`/artifacts/${appId}/users/`))
+        .map(d => ({
+          uid: d.ref.parent.parent.id,
+          balance: Number(d.data().balance || 0)
+        }));
 
-      // Filter: nur docs mit id 'balance', numerisches Feld und im richtigen app-Pfad
-      const balanceDocs = snapshot.docs.filter(d => {
-        return d.id === 'balance'
-          && d.data()
-          && typeof d.data().balance === 'number'
-          && d.ref.path.includes(`/artifacts/${appId}/users/`);
-      });
-
-      console.log('[Scoreboard] balance docs found:', balanceDocs.length);
-
-      const entries = balanceDocs.map(d => {
-        const uid = d.ref.parent?.parent?.id || null; // artifacts/{appId}/users/{uid}/profile/balance -> parent.parent = user doc
-        return { uid, balance: Number(d.data().balance || 0) };
-      });
-
-      // Sortiere absteigend und rendere
       entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
       await renderScoreboard(entries);
     });
   } catch (err) {
     console.error('[Scoreboard] listenTopBalances error:', err);
-  }
-}
-
-// One-time Fetch wenn z.B. Tab geöffnet wird
-async function fetchTopBalances() {
-  try {
-    const q = query(collectionGroup(db, 'profile'));
-    const snap = await getDocs(q);
-    console.log('[Scoreboard] fetch getDocs size:', snap.size);
-
-    const balanceDocs = snap.docs.filter(d => {
-      return d.id === 'balance'
-        && d.data()
-        && typeof d.data().balance === 'number'
-        && d.ref.path.includes(`/artifacts/${appId}/users/`);
-    });
-
-    console.log('[Scoreboard] fetch balance docs:', balanceDocs.length);
-
-    const entries = balanceDocs.map(d => ({ uid: d.ref.parent?.parent?.id || null, balance: Number(d.data().balance || 0) }));
-    entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
-
-    await renderScoreboard(entries);
-  } catch (err) {
-    console.error('[Scoreboard] fetchTopBalances error:', err);
   }
 }
 
