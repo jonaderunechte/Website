@@ -969,7 +969,7 @@ async function listenTopBalances() {
         return d.id === 'balance'
           && d.data()
           && typeof d.data().balance === 'number'
-          && d.ref.path.includes(`/artifacts/users/`);
+          && d.ref.path.includes(`/artifacts/${appId}/users/`);
       });
 
       console.log('[Scoreboard] balance docs found:', balanceDocs.length);
@@ -999,7 +999,7 @@ async function fetchTopBalances() {
       return d.id === 'balance'
         && d.data()
         && typeof d.data().balance === 'number'
-        && d.ref.path.includes(`/artifacts/users/`);
+        && d.ref.path.includes(`/artifacts/${appId}/users/`);
     });
 
     console.log('[Scoreboard] fetch balance docs:', balanceDocs.length);
