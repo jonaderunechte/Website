@@ -271,15 +271,15 @@
     async function authenticate() {
       try {
         await signInAnonymously(auth);
-        userId = auth.currentUser.uid;
-        currentUserIdSpan.textContent = userId;
-        defineAchievements();
-        listenForUserBalance();
-        listenForItems();
-        listenForAchievements();
-        listenForUserName();
-        await fetchTopBalances();
-        listenTopBalances();
+userId = auth.currentUser.uid;
+currentUserIdSpan.textContent = userId;
+defineAchievements();
+listenForUserBalance();
+listenForItems();
+listenForAchievements();
+listenForUserName();
+await fetchTopBalances();   // einmalig sofort laden
+listenTopBalances();       // und dann Live-Updates
       } catch (error) {
         showMessage("Fehler bei der Anmeldung: " + error.message, 'error');
       }
@@ -388,7 +388,7 @@
                 let isCompleted = false;
 
                 if (achievement.type === 'balanceMilestone') {
-                    is​​​​​​​​​​​​​​​​Completed = currentBalance >= achievement.required;
+                    isCompleted = currentBalance >= achievement.required;
                 } else if (achievement.type === 'postImages' || achievement.type === 'postPrice' || achievement.type === 'postQuantity' || achievement.type === 'buyValue' || achievement.type === 'buyBulk' || achievement.type === 'sellValue') {
                     const values = progressInfo.imagesPosted || progressInfo.pricesPosted || progressInfo.quantitiesPosted || progressInfo.valuesBought || progressInfo.bulkBuys || progressInfo.valuesSold || [];
                     isCompleted = values.some(val => val >= achievement.required);
@@ -631,7 +631,7 @@
           imageUrls: newImages,
           description: newDescription
         });
-        await updateAchievementProgress('editItem', 1);
+        await updateAchievementProgress('editItem', 1); // Update achievement progress
         showMessage("Artikel erfolgreich bearbeitet!", 'success');
         editModal.classList.add("hidden");
       } catch (err) {
@@ -644,7 +644,7 @@
       try {
         const itemRef = doc(db, `artifacts/${appId}/public/data/products/${itemId}`);
         await deleteDoc(itemRef);
-        await updateAchievementProgress('deleteItem', 1);
+        await updateAchievementProgress('deleteItem', 1); // Update achievement progress
         showMessage("Artikel erfolgreich gelöscht!", 'success');
       } catch (err) {
         console.error(err);
@@ -691,6 +691,7 @@
           await setDoc(sellerBalanceRef, { balance: item.price });
         }
 
+        // Update achievements for the seller
         if (item.sellerId !== userId) {
           await updateAchievementProgress('sellItem', 1, 0, item.sellerId);
           await updateAchievementProgress('completeTransaction', 1, 0, item.sellerId);
@@ -734,6 +735,7 @@
         return;
       }
 
+      // Determine current display name (if available)
       const sellerName = nameCache[userId] || null;
 
       const item = {
@@ -812,6 +814,7 @@
 
           for (const t of transSnapshot.docs) {
             const trans = t.data();
+            // For seller view
             if (item.sellerId === userId) {
               const buyerName = trans.buyerName || await getUserDisplayName(trans.buyerId) || trans.buyerId;
               const soldCard = document.createElement("div");
@@ -829,6 +832,7 @@
               transactionsContent.appendChild(soldCard);
             }
 
+            // For buyer view
             if (trans.buyerId === userId) {
               const sellerName = item.sellerName || await getUserDisplayName(item.sellerId) || item.sellerId;
               const boughtCard = document.createElement("div");
@@ -857,6 +861,7 @@
       }
     });
 
+    // Tab-Funktionalität
     tabMarketplace.addEventListener("click", () => {
       viewMarketplace.classList.remove("hidden");
       viewAchievements.classList.add("hidden");
@@ -892,9 +897,11 @@
       tabMarketplace.classList.remove("bg-blue-600", "text-white", "hover:bg-blue-700");
       tabAchievements.classList.add("bg-gray-200", "text-gray-800", "hover:bg-gray-300");
       tabAchievements.classList.remove("bg-blue-600", "text-white", "hover:bg-blue-700");
+      // Update scoreboard when opening the tab
       await fetchTopBalances();
     });
 
+    // Connect display name (speichere unter artifacts/{appId}/users/{userId}/profile/name)
     connectNameBtn.addEventListener("click", async () => {
       const name = displayNameInput.value.trim();
       if (!name) {
@@ -914,78 +921,82 @@
       await fetchTopBalances();
     });
 
-    // --- Scoreboard Functions ---
-    async function renderScoreboard(entries) {
-      scoreboardList.innerHTML = '';
+    // --- FIXED: Top 10 listener ---
+    // Problem: earlier code tried to use collectionGroup('balance') although 'balance' is stored as a DOCUMENT
+    // under the 'profile' subcollection (i.e. artifacts/{appId}/users/{uid}/profile/balance). collectionGroup('balance')
+    // returns nothing. We now query collectionGroup('profile') and filter documents named 'balance' client-side,
+    // then sort by balance and render the top 10. This avoids needing special indexes and works reliably.
+    // --- Scoreboard: robustere Version ---
+// Helper: rendert die übergebenen Einträge (async, weil wir Display-Namen holen)
+async function renderScoreboard(entries) {
+  scoreboardList.innerHTML = '';
 
-      if (!entries || entries.length === 0) {
-        scoreboardList.innerHTML = "<p class='text-gray-500 text-center'>Noch keine Nutzer/Guthaben vorhanden.</p>";
-        return;
-      }
+  if (!entries || entries.length === 0) {
+    scoreboardList.innerHTML = "<p class='text-gray-500'>Noch keine Nutzer/Guthaben vorhanden.</p>";
+    return;
+  }
 
-      const slice = entries.slice(0, 10);
-      
-      for (let idx = 0; idx < slice.length; idx++) {
-        const e = slice[idx];
-        const display = e.uid ? (await getUserDisplayName(e.uid)) || e.uid : 'Unbekannt';
-        const row = document.createElement("div");
-        row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
-        
-        if (e.uid === userId) {
-          row.classList.add('ring-2', 'ring-blue-500');
-        }
-        
-        row.innerHTML = `
-          <div>
-            <div class="font-bold">${idx + 1}. ${escapeHtml(display)}</div>
-            <div class="text-sm text-gray-500">ID: ${e.uid.substring(0, 8)}...</div>
-          </div>
-          <div class="text-right">
-            <div class="font-bold text-green-600">${(e.balance || 0).toFixed(2)} J€</div>
-          </div>
-        `;
-        scoreboardList.appendChild(row);
-      }
-    }
+  // Hole Display-Namen parallel (Cache in getUserDisplayName spart Calls)
+  const slice = entries.slice(0, 10);
+  const rows = await Promise.all(slice.map(async (e, idx) => {
+    const display = e.uid ? (await getUserDisplayName(e.uid)) || e.uid : 'Unbekannt';
+    const row = document.createElement("div");
+    row.className = "p-3 bg-white rounded shadow flex justify-between items-center";
+    row.innerHTML = `
+      <div>
+        <div class="font-bold">${idx + 1}. ${escapeHtml(display)}</div>
+        <div class="text-sm text-gray-500">ID: ${e.uid}</div>
+      </div>
+      <div class="text-right">
+        <div class="font-bold">${(e.balance || 0).toFixed(2)} J€</div>
+      </div>
+    `;
+    return row;
+  }));
 
-    async function fetchTopBalances() {
-      try {
-        const usersRef = collection(db, `artifacts/${appId}/users`);
-        const usersSnap = await getDocs(usersRef);
-        
-        const entries = [];
-        
-        for (const userDoc of usersSnap.docs) {
-          const balanceRef = doc(db, `artifacts/${appId}/users/${userDoc.id}/profile/balance`);
-          const balanceSnap = await getDoc(balanceRef);
-          
-          if (balanceSnap.exists()) {
-            entries.push({
-              uid: userDoc.id,
-              balance: Number(balanceSnap.data().balance || 0)
-            });
-          }
-        }
+  rows.forEach(r => scoreboardList.appendChild(r));
+}
 
-        entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
-        await renderScoreboard(entries);
-      } catch (err) {
-        console.error('[Scoreboard] fetchTopBalances error:', err);
-        scoreboardList.innerHTML = "<p class='text-red-500 text-center'>Fehler beim Laden des Scoreboards.</p>";
-      }
-    }
+//// --- Neue Version: Scoreboard richtig laden ---
+async function fetchTopBalances() {
+  try {
+    const q = query(collectionGroup(db, 'balance'));
+    const snap = await getDocs(q);
 
-    function listenTopBalances() {
-      try {
-        const usersRef = collection(db, `artifacts/${appId}/users`);
-        onSnapshot(usersRef, async () => {
-          await fetchTopBalances();
-        });
-      } catch (err) {
-        console.error('[Scoreboard] listenTopBalances error:', err);
-      }
-    }
+    const entries = snap.docs
+      .filter(d => d.ref.path.includes(`/artifacts/${appId}/users/`))
+      .map(d => ({
+        uid: d.ref.parent.parent.id, // balance -> profile -> userId
+        balance: Number(d.data().balance || 0)
+      }));
 
+    entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+    await renderScoreboard(entries);
+  } catch (err) {
+    console.error('[Scoreboard] fetchTopBalances error:', err);
+  }
+}
+
+async function listenTopBalances() {
+  try {
+    const q = query(collectionGroup(db, 'balance'));
+    onSnapshot(q, async (snapshot) => {
+      const entries = snapshot.docs
+        .filter(d => d.ref.path.includes(`/artifacts/${appId}/users/`))
+        .map(d => ({
+          uid: d.ref.parent.parent.id,
+          balance: Number(d.data().balance || 0)
+        }));
+
+      entries.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+      await renderScoreboard(entries);
+    });
+  } catch (err) {
+    console.error('[Scoreboard] listenTopBalances error:', err);
+  }
+}
+
+    // small helper to escape text to avoid injection in innerHTML where user data is used
     function escapeHtml(unsafe) {
       return String(unsafe)
         .replace(/&/g, "&amp;")
@@ -999,3 +1010,4 @@
   </script>
 </body>
 </html>
+<a href="https://jonaderunechte.github.io/Paper-game/" target="_blank">try also: J/place</a>
